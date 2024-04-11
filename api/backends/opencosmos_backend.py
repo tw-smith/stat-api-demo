@@ -3,6 +3,7 @@ from email import header
 from math import prod
 from operator import ge
 from os import link
+from re import A
 from click import Option
 import geojson_pydantic
 from pystac import Collection
@@ -23,6 +24,16 @@ class ManualTaskingSearchRequest(BaseModel):
     areas_of_interest: list[dict[str, str | Feature]]
     #constraints: Optional[ProductConstraints]
     constraints: list
+    start: datetime.datetime
+    stop: datetime.datetime
+
+    def to_json(self, **kwargs: Any):
+        return self.json(by_alias=True, exclude_unset=True, **kwargs)
+    
+class ManualTaskingSwathRequest(BaseModel):
+    instrument: dict[str, str]
+    area_of_interest: dict[str, str | Feature]
+    roll_angle: float
     start: datetime.datetime
     stop: datetime.datetime
 
@@ -84,16 +95,47 @@ def opportunity_to_mto_search_request(opportunity: Opportunity) -> ManualTasking
 def mto_search_response_to_opportunity_collection(response: dict, geometry: Geometry) -> list[Opportunity]:
     opportunities = []
     for opportunity in response["data"]:
+        start = str(opportunity["start"].split(".")[0])
+        stop = str(opportunity["stop"].split(".")[0])
         opportunities.append(Opportunity(
             id="id",
             geometry=geometry,
             # TODO implement constraints
-            datetime=f"{opportunity['start']}/{opportunity['stop']}",
+            datetime=f"{start}/{stop}",
             product_id="hard coded opp product id",
             constraints=None,
             )
         )
     return opportunities
+
+
+def get_swath(opp: Opportunity, token: str) -> dict:
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
+
+    payload = ManualTaskingSwathRequest(
+        instrument={
+            'mission_id': '55',
+            'sensor_id': 'MultiScape100 CIS'
+        },
+        area_of_interest={
+            'name': 'aoi_name',
+            'geojson': Feature(geometry=opp.geometry, type="Feature", properties={'test': 'test'})
+        },
+        roll_angle=41.0, #TODO get from constraints
+        start=opp.start_date,
+        stop=opp.end_date,
+    )
+
+    mto_swath_response = requests.post(
+        f"{OC_MTO_URL}/swath", 
+        data=json.dumps(payload.dict(), default=str, indent=4),
+        headers=headers
+    )
+
+    return mto_swath_response.json()
 
 
 class OpenCosmosBackend:
@@ -110,7 +152,7 @@ class OpenCosmosBackend:
         )
         
         opportunities = mto_search_response_to_opportunity_collection(mto_search_response.json(), search.geometry)
-
+        test = get_swath(opportunities[0], token)
         return opportunities
     
     async def find_products(self, token: str) -> list[Product]:
