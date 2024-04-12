@@ -85,7 +85,7 @@ async def get_product_opportunities(
         start_datetime = datetime.now()
         end_datetime = start_datetime + timedelta(days=40)
         search = Opportunity(
-            geometry=Point(coordinates=(45, 45)),
+            geometry=Point(type='Point', coordinates=(45, 45)),
             datetime=f"{start_datetime.isoformat()}/{end_datetime.isoformat()}",
             product_id=id,
         )
@@ -111,7 +111,7 @@ async def get_opportunities(
         end_datetime = start_datetime + timedelta(days=40)
         product_id = "landsat-c2-l2"
         search = Opportunity(
-            geometry=Point(coordinates=(45, 45)),
+            geometry=Point(type='Point', coordinates=(45, 45)),
             datetime=f"{start_datetime.isoformat()}/{end_datetime.isoformat()}",
             product_id=product_id,
         )
