@@ -26,10 +26,11 @@ npm-debug.log
 # vscode
 pyrightconfig.json
 sat-tasking-sprint.code-workspace
-.vscode/
+.vscode/settings.json
 
 # python
 .python-version
 .venv
 __pycache__
 .env
+venv
