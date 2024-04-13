@@ -1,6 +1,3 @@
-from datetime import datetime
-from typing import Optional, Any
-from pydantic import BaseModel
 from geojson_pydantic.features import Feature
 from api.models import (
     Geometry,
@@ -12,79 +9,19 @@ from api.models import (
 )
 import requests
 import json
+from api.backends.opencosmos_entities.transport import (
+    CreateTaskingRequestRequest,
+    ManualTaskingOrchestrationSearchRequest,
+    ManualTaskingOrchestrationSwathRequest,
+    ActivityParameters,
+    Activity,
+)
+from api.backends.opencosmos_entities.utils import convert_datetime_string_to_datetime
 
 
 OC_STAC_API_URL = "https://test.app.open-cosmos.com/api/data/v0/stac"
 OC_MTO_URL = "https://test.app.open-cosmos.com/api/data/v1/tasking"
 OC_TASKING_REQUESTS_URL = "https://test.app.open-cosmos.com/api/data/v1"
-
-
-def convert_datetime_to_iso8601(date: datetime) -> str:
-    return date.strftime("%Y-%m-%dT%H:%M:%SZ")
-
-
-def convert_datetime_string_to_datetime(date: str) -> datetime:
-    date = date.split(".")[0]
-    date = f"{date}Z"
-    return datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ")
-
-
-class ManualTaskingSearchRequest(BaseModel):
-    instruments: list[dict[str, str]]
-    areas_of_interest: list[dict[str, str | Feature]]
-    # constraints: Optional[ProductConstraints]
-    constraints: list
-    start: datetime
-    stop: datetime
-
-    def to_json(self, **kwargs: Any):
-        return self.json(by_alias=True, exclude_unset=True, **kwargs)
-
-
-class ManualTaskingSwathRequest(BaseModel):
-    instrument: dict[str, str]
-    area_of_interest: dict[str, str | Feature]
-    roll_angle: float
-    start: datetime
-    stop: datetime
-
-    def to_json(self, **kwargs: Any):
-        return self.json(by_alias=True, exclude_unset=True, **kwargs)
-
-    class Config:
-        json_encoders = {datetime: convert_datetime_to_iso8601}
-
-
-class ActivityParameters(BaseModel):
-    platform: dict[str, float]
-    imager: dict[str, str]
-
-
-class Activity(BaseModel):
-    mission_id: str
-    start_date: datetime
-    end_date: datetime
-    type: str
-    parameters: ActivityParameters
-
-    class Config:
-        json_encoders = {datetime: convert_datetime_to_iso8601}
-
-
-class TaskingRequestRequest(BaseModel):
-    type: str
-    region_name: str
-    region: Feature
-    parameters: Optional[dict[str, Any]]
-    activities: list[Activity]
-    constraints: list
-    instruments: list[dict[str, str]]
-
-    def to_json(self, **kwargs: Any):
-        return self.json(by_alias=True, exclude_unset=True, **kwargs)
-
-    class Config:
-        json_encoders = {datetime: convert_datetime_to_iso8601}
 
 
 def oc_stac_collection_to_product(collection: dict) -> Product:
@@ -121,8 +58,17 @@ def oc_stac_collection_to_product(collection: dict) -> Product:
 
 def opportunity_to_mto_search_request(
     opportunity: Opportunity,
-) -> ManualTaskingSearchRequest:
-    return ManualTaskingSearchRequest(
+) -> ManualTaskingOrchestrationSearchRequest:
+    """Converts a STAT Opportunity object into an MTO opportunity search request object
+
+    Args:
+        opportunity (Opportunity): The STAT Opportunity object
+
+    Returns:
+        ManualTaskingOrchestrationSearchRequest: The MTO opportunity search request object
+    """
+
+    return ManualTaskingOrchestrationSearchRequest(
         instruments=[{"mission_id": "55", "sensor_id": "MultiScape100 CIS"}],
         areas_of_interest=[
             {
@@ -144,6 +90,16 @@ def opportunity_to_mto_search_request(
 def mto_search_response_to_opportunity_collection(
     response: dict, geometry: Geometry
 ) -> list[Opportunity]:
+    """Converts an MTO opportunity search response into a list of STAT Opportunities
+
+    Args:
+        response (dict): The MTO opportunity search response
+        geometry (Geometry): The geometry of the search area
+
+    Returns:
+        list[Opportunity]: A list of STAT Opportunities (STAT Opportunity collection?)
+    """
+
     opportunities = []
     for opportunity in response["data"]:
         start = str(opportunity["start"].split(".")[0])
@@ -162,12 +118,23 @@ def mto_search_response_to_opportunity_collection(
 
 
 def get_swath(oc_opp: dict, aoi: Geometry, token: str) -> dict:
+    """Builds the MTO swath request and sends it to the MTO service swath endpoint
+
+    Args:
+        oc_opp (dict): The OpenCosmos opportunity
+        aoi (Geometry): The area of interest
+        token (str): The user's token
+
+    Returns:
+        dict: The MTO swath response
+    """
+
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
 
-    payload = ManualTaskingSwathRequest(
+    payload = ManualTaskingOrchestrationSwathRequest(
         instrument={"mission_id": "55", "sensor_id": "MultiScape100 CIS"},
         area_of_interest={
             "name": "aoi_name",
@@ -184,13 +151,23 @@ def get_swath(oc_opp: dict, aoi: Geometry, token: str) -> dict:
         f"{OC_MTO_URL}/swath",
         data=json.dumps(payload.dict(), default=str, indent=4),
         headers=headers,
-        timeout=10
+        timeout=10,
     )
 
     return mto_swath_response.json()
 
 
 def get_oc_opportunity(opportunity: Opportunity, token: str) -> dict:
+    """Gets an OpenCosmos opportunity from the MTO service opportunity search endpoint
+
+    Args:
+        opportunity (Opportunity): The STAT Opportunity object
+        token (str): The user's token
+
+    Returns:
+        dict: The OpenCosmos opportunity search response
+    """
+
     request_body = opportunity_to_mto_search_request(opportunity)
     headers = {
         "Authorization": f"Bearer {token}",
@@ -198,16 +175,25 @@ def get_oc_opportunity(opportunity: Opportunity, token: str) -> dict:
     }
     response = requests.post(
         f"{OC_MTO_URL}/search",
-        data=json.dumps(request_body.dict(), default=str, indent=4),
+        data=request_body.to_json(),
         headers=headers,
-        timeout=10
+        timeout=10,
     )
     return response.json()
 
 
 def build_tasking_request_request(
     opportunity: Opportunity, token: str
-) -> TaskingRequestRequest:
+) -> CreateTaskingRequestRequest:
+    """Builds an OC tasking request from a STAT Opportunity object
+
+    Args:
+        opportunity (Opportunity): The STAT Opportunity object
+        token (str): The user's token
+
+    Returns:
+        CreateTaskingRequestRequest: The OC tasking request body"""
+
     oc_opp = get_oc_opportunity(opportunity, token)
 
     activity_parameters = ActivityParameters(
@@ -225,7 +211,7 @@ def build_tasking_request_request(
         parameters=activity_parameters,
     )
 
-    return TaskingRequestRequest(
+    return CreateTaskingRequestRequest(
         type="MANUAL",
         region_name="region_name",
         region=Feature(
@@ -242,6 +228,16 @@ class OpenCosmosBackend:
     async def find_opportunities(
         self, search: Opportunity, token: str
     ) -> list[Opportunity]:
+        """Finds opportunities from the MTO service and converts them to STAT Opportunities
+
+        Args:
+            search (Opportunity): The STAT Opportunity object
+            token (str): The user's token
+
+        Returns:
+            list[Opportunity]: A list of STAT Opportunities
+        """
+
         headers = {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
@@ -253,7 +249,7 @@ class OpenCosmosBackend:
                 opportunity_to_mto_search_request(search).dict(), default=str, indent=4
             ),
             headers=headers,
-            timeout=10
+            timeout=10,
         )
 
         opportunities = mto_search_response_to_opportunity_collection(
@@ -262,6 +258,15 @@ class OpenCosmosBackend:
         return opportunities
 
     async def find_products(self, token: str) -> list[Product]:
+        """Finds products from the STAC API and converts them to STAT Products
+
+        Args:
+            token (str): The user's token
+
+        Returns:
+            list[Product]: A list of STAT Products
+        """
+
         headers = {"Authorization": f"Bearer {token}"}
 
         stac_collection_response = requests.get(
@@ -275,6 +280,17 @@ class OpenCosmosBackend:
         return products
 
     async def place_order(self, order: Opportunity, token: str) -> Order:
+        """Takes a STAT opportunity and converts it to an OC tasking request and submits
+        it to the Tasking Requests service.
+
+        Args:
+            order (Opportunity): The STAT Opportunity object
+            token (str): The user's token
+
+        Returns:
+            Order: The order object
+        """
+
         headers = {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
@@ -290,7 +306,7 @@ class OpenCosmosBackend:
             f"{OC_TASKING_REQUESTS_URL}/projects/{project_id}/tasking/requests",
             data=tasking_request.to_json(),
             headers=headers,
-            timeout=10
+            timeout=10,
         )
 
         print(tasking_request_response.json())
