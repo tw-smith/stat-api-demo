@@ -1,4 +1,5 @@
 from datetime import datetime
+import re
 
 
 def convert_datetime_to_iso8601(date: datetime) -> str:
@@ -16,3 +17,9 @@ def convert_datetime_string_to_datetime(date: str) -> datetime:
     date = date.split(".")[0]
     date = f"{date}Z"
     return datetime.strptime(date, "%Y-%m-%dT%H:%M:%SZ")
+
+def datetime_parser(dict_: dict) -> dict:
+    for key, value in dict_.items():
+        if isinstance(value, str) and re.search("start|stop", key):
+            dict_[key] = convert_datetime_string_to_datetime(value)
+    return dict_

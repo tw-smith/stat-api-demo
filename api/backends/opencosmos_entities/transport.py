@@ -1,8 +1,9 @@
 from datetime import datetime
+from token import OP
 from typing import Any, Optional
 from geojson_pydantic.features import Feature
 from pydantic import BaseModel
-from api.backends.opencosmos_entities.utils import convert_datetime_to_iso8601
+from api.backends.opencosmos_entities.utils import convert_datetime_string_to_datetime, convert_datetime_to_iso8601
 
 
 class ManualTaskingOrchestrationSearchRequest(BaseModel):
@@ -67,4 +68,38 @@ class CreateTaskingRequestRequest(BaseModel):
 
     class Config:
         json_encoders = {datetime: convert_datetime_to_iso8601}
+
+class FieldOfRegard(BaseModel):
+    """Represents the field of regard for an opportunity"""
+
+    class Footprint(BaseModel):
+        """Represents the footprint of the field of regard"""
+        geojson: Feature
+
+    footprint: Footprint
+    sza_deg: float
+
+    def to_json(self, **kwargs: Any):
+        return self.json(by_alias=True, exclude_unset=True, **kwargs)
+
+
+class ManualTaskingOrchestrationSearchResponse(BaseModel):
+    """Represents the response body for a MTO opportunity search request"""
+    region_id: str
+    mission_id: str
+    imager_id: str
+    start: datetime
+    stop: datetime
+    roll_steering: list[float]
+    suggested_roll: float
+    cloud_coverage: Optional[float]
+    sun_glint: Optional[float]
+    sza: float
+    oza: Optional[float]
+
+    class Config:
+        json_encoders = {datetime: convert_datetime_string_to_datetime}
+
+    def to_json(self, **kwargs: Any):
+        return self.json(by_alias=True, exclude_unset=True, **kwargs)
 

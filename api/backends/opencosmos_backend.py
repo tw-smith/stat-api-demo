@@ -12,11 +12,12 @@ import json
 from api.backends.opencosmos_entities.transport import (
     CreateTaskingRequestRequest,
     ManualTaskingOrchestrationSearchRequest,
+    ManualTaskingOrchestrationSearchResponse,
     ManualTaskingOrchestrationSwathRequest,
     ActivityParameters,
     Activity,
 )
-from api.backends.opencosmos_entities.utils import convert_datetime_string_to_datetime
+from api.backends.opencosmos_entities.utils import convert_datetime_string_to_datetime, datetime_parser
 
 
 OC_STAC_API_URL = "https://test.app.open-cosmos.com/api/data/v0/stac"
@@ -88,7 +89,7 @@ def opportunity_to_mto_search_request(
 
 
 def mto_search_response_to_opportunity_collection(
-    response: dict, geometry: Geometry
+    response: dict
 ) -> list[Opportunity]:
     """Converts an MTO opportunity search response into a list of STAT Opportunities
 
@@ -107,7 +108,7 @@ def mto_search_response_to_opportunity_collection(
         opportunities.append(
             Opportunity(
                 id="id",
-                geometry=geometry,
+                geometry=opportunity["field_of_regard"]["footprint"]["geojson"]["geometry"],
                 # TODO implement constraints
                 datetime=f"{start}/{stop}",
                 product_id="hard coded opp product id",
@@ -157,7 +158,7 @@ def get_swath(oc_opp: dict, aoi: Geometry, token: str) -> dict:
     return mto_swath_response.json()
 
 
-def get_oc_opportunity(opportunity: Opportunity, token: str) -> dict:
+def get_oc_opportunity(opportunity: Opportunity, token: str) -> ManualTaskingOrchestrationSearchResponse:
     """Gets an OpenCosmos opportunity from the MTO service opportunity search endpoint
 
     Args:
@@ -179,7 +180,8 @@ def get_oc_opportunity(opportunity: Opportunity, token: str) -> dict:
         headers=headers,
         timeout=10,
     )
-    return response.json()
+
+    return ManualTaskingOrchestrationSearchResponse.parse_obj(response.json(object_hook=datetime_parser)['data'][0])
 
 
 def build_tasking_request_request(
@@ -206,8 +208,8 @@ def build_tasking_request_request(
     activity = Activity(
         type="IMAGE_ACQUISITION",
         mission_id="55",
-        start_date=convert_datetime_string_to_datetime(oc_opp["data"][0]["start"]),
-        end_date=convert_datetime_string_to_datetime(oc_opp["data"][0]["stop"]),
+        start_date=oc_opp.start,
+        end_date=oc_opp.stop,
         parameters=activity_parameters,
     )
 
@@ -253,7 +255,7 @@ class OpenCosmosBackend:
         )
 
         opportunities = mto_search_response_to_opportunity_collection(
-            mto_search_response.json(), search.geometry
+            mto_search_response.json()
         )
         return opportunities
 
