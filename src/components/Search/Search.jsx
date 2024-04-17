@@ -106,7 +106,7 @@ const Search = () => {
     <div className="Search" data-testid="Search">
       <div className="searchFilters">
         <div className={`searchContainer collectionDropdown`}>
-          <CollectionDropdown></CollectionDropdown>
+          <CollectionDropdown />
         </div>
         <div className="searchContainer datePickerComponent">
           <DateTimeRangeSelector></DateTimeRangeSelector>
@@ -134,7 +134,7 @@ const Search = () => {
                     !_searchGeojsonBoundary
                       ? 'searchByGeomOptionsButton'
                       : 'searchByGeomOptionsButton ' +
-                        'searchByGeomOptionsButtonDisabled'
+                      'searchByGeomOptionsButtonDisabled'
                   }
                   onClick={onDrawBoundaryClicked}
                 >
@@ -145,7 +145,7 @@ const Search = () => {
                     !_searchGeojsonBoundary
                       ? 'searchByGeomOptionsButton'
                       : 'searchByGeomOptionsButton ' +
-                        'searchByGeomOptionsButtonDisabled'
+                      'searchByGeomOptionsButtonDisabled'
                   }
                   onClick={onUploadGeojsonButtonClicked}
                 >
@@ -156,7 +156,7 @@ const Search = () => {
                     _searchGeojsonBoundary
                       ? 'searchByGeomOptionsButton'
                       : 'searchByGeomOptionsButton ' +
-                        'searchByGeomOptionsButtonDisabled'
+                      'searchByGeomOptionsButtonDisabled'
                   }
                   onClick={onClearButtonClicked}
                 >

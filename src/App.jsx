@@ -10,6 +10,7 @@ import { LoadConfigIntoStateService } from './services/get-config-service'
 import { useSelector } from 'react-redux'
 import CartModal from './components/Cart/CartModal/CartModal'
 import { InitializeAppFromConfig } from './utils/configHelper'
+import { GetProductsService } from './services/get-products-service'
 
 function App() {
   const _showUploadGeojsonModal = useSelector(
@@ -34,6 +35,7 @@ function App() {
     if (_appConfig) {
       InitializeAppFromConfig()
       GetCollectionsService()
+      GetProductsService()
     }
   }, [_appConfig])
 
