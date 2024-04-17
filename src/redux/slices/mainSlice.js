@@ -20,6 +20,7 @@ const initialState = {
   searchType: null,
   collectionsData: [],
   selectedCollectionData: null,
+  selectedProductData: null,
   productsData: [],
   searchDateRangeValue: DEFAULT_DATE_RANGE,
   localGridData: {},
@@ -104,6 +105,9 @@ export const mainSlice = createSlice({
     },
     setSelectedCollectionData: (state, action) => {
       state.selectedCollectionData = action.payload
+    },
+    setSelectedProductData: (state, action) => {
+      state.selectedProductData = action.payload
     },
     setProductsData: (state, action) => {
       state.productsData = action.payload
@@ -227,5 +231,6 @@ export const { setselectedPopupResultIndex } = mainSlice.actions
 export const { setautoCenterOnItemChanged } = mainSlice.actions
 export const { sethasLeftPanelTabChanged } = mainSlice.actions
 export const { setProductsData } = mainSlice.actions
+export const { setSelectedProductData } = mainSlice.actions
 
 export default mainSlice.reducer

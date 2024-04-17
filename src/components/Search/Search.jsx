@@ -12,6 +12,7 @@ import 'react-tooltip/dist/react-tooltip.css'
 import DateTimeRangeSelector from '../DateTimeRangeSelector/DateTimeRangeSelector'
 import CloudSlider from '../CloudSlider/CloudSlider'
 import CollectionDropdown from '../CollectionDropdown/CollectionDropdown'
+import ProductDropdown from '../ProductDropdown/ProductsDropdown'
 import ViewSelector from '../ViewSelector/ViewSelector'
 import { newSearch } from '../../utils/searchHelper'
 import { enableMapPolyDrawing, clearLayer } from '../../utils/mapHelper'
@@ -106,7 +107,7 @@ const Search = () => {
     <div className="Search" data-testid="Search">
       <div className="searchFilters">
         <div className={`searchContainer collectionDropdown`}>
-          <CollectionDropdown />
+          <ProductDropdown />
         </div>
         <div className="searchContainer datePickerComponent">
           <DateTimeRangeSelector></DateTimeRangeSelector>
