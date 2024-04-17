@@ -21,7 +21,6 @@ import Filter from '../Filter/Filter'
 import DrawTools from '../DrawTools/DrawTools'
 
 const Search = () => {
-
   const theme = createTheme({
     components: {
       MuiSwitch: {
@@ -50,7 +49,7 @@ const Search = () => {
       <div className="searchFilters">
         <DrawTools />
         <div className={`searchContainer collectionDropdown`}>
-          <CollectionDropdown />
+          <ProductDropdown />
         </div>
         <Filter />
       </div>
