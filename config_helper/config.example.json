@@ -102,7 +102,7 @@
     }
   },
   "BASEMAP_URL": "https://tile-provider.example.com/{z}/{x}/{y}.png",
-  "BASEMAP_DARK_THEME": true,
+  "BASEMAP_DARK_THEME": false,
   "BASEMAP_HTML_ATTRIBUTION": "&copy; <a href=\"https://www.tile-provider.example.com/copyright\">TileProvider</a>",
   "SEARCH_BY_GEOM_ENABLED": false,
   "CART_ENABLED": false,
