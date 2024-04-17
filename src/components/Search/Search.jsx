@@ -48,7 +48,6 @@ const Search = () => {
   return (
     <div className="Search" data-testid="Search">
       <div className="searchFilters">
-        <DrawTools />
         <div className={`searchContainer collectionDropdown`}>
           <ProductDropdown />
         </div>

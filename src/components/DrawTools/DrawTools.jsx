@@ -3,11 +3,11 @@ import { ThemeProvider, createTheme } from '@mui/material/styles'
 import { useSelector } from 'react-redux'
 import 'react-tooltip/dist/react-tooltip.css'
 import {
-    setautoCenterOnItemChanged,
-    setisDrawingEnabled,
-    setsearchGeojsonBoundary,
-    setshowSearchByGeom,
-    setshowUploadGeojsonModal
+  setautoCenterOnItemChanged,
+  setisDrawingEnabled,
+  setsearchGeojsonBoundary,
+  setshowSearchByGeom,
+  setshowUploadGeojsonModal
 } from '../../redux/slices/mainSlice'
 import { clearLayer, enableMapPolyDrawing } from '../../utils/mapHelper'
 
@@ -84,19 +84,14 @@ const DrawTools = () => {
       {_appConfig.SEARCH_BY_GEOM_ENABLED && (
         <div className="searchContainer searchBoundary">
           <Box className="searchFilterContainer">
-            <label
-              htmlFor="searchByGeomOptionsContainer"
-              className="searchByGeomOptionsText"
-            >
-              Area of Interest
-            </label>
+
             <div className="searchByGeomOptionsButtons">
               <button
                 className={
                   !_searchGeojsonBoundary
                     ? 'searchByGeomOptionsButton'
                     : 'searchByGeomOptionsButton ' +
-                      'searchByGeomOptionsButtonDisabled'
+                    'searchByGeomOptionsButtonDisabled'
                 }
                 onClick={onDrawBoundaryClicked}
               >
@@ -107,7 +102,7 @@ const DrawTools = () => {
                   !_searchGeojsonBoundary
                     ? 'searchByGeomOptionsButton'
                     : 'searchByGeomOptionsButton ' +
-                      'searchByGeomOptionsButtonDisabled'
+                    'searchByGeomOptionsButtonDisabled'
                 }
                 onClick={onUploadGeojsonButtonClicked}
               >
@@ -118,26 +113,13 @@ const DrawTools = () => {
                   _searchGeojsonBoundary
                     ? 'searchByGeomOptionsButton'
                     : 'searchByGeomOptionsButton ' +
-                      'searchByGeomOptionsButtonDisabled'
+                    'searchByGeomOptionsButtonDisabled'
                 }
                 onClick={onClearButtonClicked}
               >
                 Clear
               </button>
             </div>
-          </Box>
-        </div>
-      )}
-      {_appConfig.SHOW_ITEM_AUTO_ZOOM && (
-        <div className="searchContainer viewSelectorComponent">
-          <Box className="searchFilterContainer">
-            <label htmlFor="ItemAutoSearch">Item Auto-Zoom</label>
-            <ThemeProvider theme={theme}>
-              <Switch
-                checked={_autoCenterOnItemChanged}
-                onChange={() => updateAutoCenterState()}
-              ></Switch>
-            </ThemeProvider>
           </Box>
         </div>
       )}
