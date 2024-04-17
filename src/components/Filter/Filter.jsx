@@ -16,94 +16,56 @@ import './Filter.css'
 
 const SELECTED_PRODUCT = {
   type: 'Product',
-  id: 'multispectral',
-  title: 'Multispectral',
-  description: 'Full color EO image',
-  keywords: ['EO', 'color'],
-  license: 'license',
+  conformsTo: [
+    'https://api.statspec.org/geojson#polygon',
+    'https://api.statspec.org/geojson#multipolygon'
+  ],
+  id: 'umbra_archive_catalog',
+  title: 'Umbra Archive Catalog',
+  description:
+    'Umbra SAR Images served by the Archive Catalog. Way more detail here or a link down in links to Product documentation.',
+  keywords: ['SAR', 'Archive'],
+  license: 'CC-BY-4.0',
   providers: {
-    name: 'planet',
-    description: 'planet description',
+    name: 'Umbra',
+    description: 'Global Omniscience',
     roles: ['producer'],
-    url: 'planet link'
+    url: 'https://umbra.space'
   },
   links: {
-    href: 'https://example.com/',
-    rel: 'latest-version',
-    type: 'media type',
-    title: 'title'
-  },
-  constraints: {
-    gsd: {
-      minimum: 0.5,
-      maximum: 10.0
-    },
-    target_elevation: {
-      minimum: 30.0,
-      maximum: 90.0
-    },
-    target_azimuth: {
-      minimum: -360.0,
-      maximum: 360.0
-    },
-    'view:sun_elevation': {
-      minimum: 10.0,
-      maximum: 90.0
-    },
-    'view:sun_azimuth': {
-      minimum: -360.0,
-      maximum: 360.0
-    },
-    'view:off_nadir': {
-      minimum: 0.0,
-      maximum: 30.0
-    },
-    cloud_coverage_prediction_max: {
-      type: 'number',
-      minimum: 0,
-      maximum: 100,
-      multipleOf: 0.01
-    }
+    href: 'https://docs.canopy.umbra.space/',
+    rel: 'documentation',
+    type: 'docs',
+    title: 'Canopy Documentation'
   },
   parameters: {
-    'eo:cloud_cover': {
-      type: 'number',
-      minimum: 0,
-      maximum: 100,
-      multipleOf: 0.01
-    }
-  },
-  properties: {
-    'eo:bands': [
-      {
-        name: 'band1',
-        common_name: 'blue',
-        center_wavelength: 0.47,
-        full_width_half_max: 0.07,
-        solar_illumination: 1959.66
+    description: 'Umbra Archive Catalog Parameters docstring yay!',
+    properties: {
+      'sar:resolution_range': {
+        type: 'number',
+        minimum: 0.25,
+        maximum: 1,
+        description:
+          'The range resolution of the SAR Image. This is equivalent to the resolution of the ground plane projected GEC Cloud-Optimized Geotiff',
+        title: 'Range Resolution (m)'
       },
-      {
-        name: 'band2',
-        common_name: 'green',
-        center_wavelength: 0.56,
-        full_width_half_max: 0.08,
-        solar_illumination: 1823.24
+      'sar:looks_azimuth': {
+        type: 'number',
+        minimum: 1,
+        maximum: 10,
+        description:
+          'The azimuth looks in the SAR Image. This value times the sar:resolution_range gives the azimuth resolution of the complex products.',
+        title: 'Range Resolution (m)'
       },
-      {
-        name: 'band3',
-        common_name: 'red',
-        center_wavelength: 0.645,
-        full_width_half_max: 0.09,
-        solar_illumination: 1512.06
-      },
-      {
-        name: 'band4',
-        common_name: 'nir',
-        center_wavelength: 0.8,
-        full_width_half_max: 0.152,
-        solar_illumination: 1041.63
+      platform: {
+        description: 'The satellites to consider for this Opportunity.',
+        title: 'Platform (Satellite)',
+        type: 'string',
+        regex: 'Umbra-\\d{2}'
       }
-    ]
+    },
+    title: 'UmbraArchiveCatalogParameters',
+    type: 'object'
   }
 }
 
@@ -162,23 +124,42 @@ const Filter = () => {
   })
 
   const filterContainer = []
-  for (const constraintName of Object.keys(SELECTED_PRODUCT.constraints)) {
-    const constraint = SELECTED_PRODUCT.constraints[constraintName]
-    if (
-      constraint.type === 'number' ||
-      constraint.minimum !== undefined ||
-      constraint.maximum !== undefined
-    ) {
+  for (const constraintName of Object.keys(
+    SELECTED_PRODUCT.parameters.properties
+  )) {
+    const constraint = SELECTED_PRODUCT.parameters.properties[constraintName]
+    if (constraint.type === 'number') {
       filterContainer.push(
         <FormControl key={constraintName}>
-          <InputLabel htmlFor="my-input" sx={{ color: '#FFF' }}>
-            {constraintName}
+          <InputLabel htmlFor={constraintName} sx={{ color: '#FFF' }}>
+            {constraint.title}
           </InputLabel>
-          <Slider disabled defaultValue={30} aria-label="Disabled slider" />
-          {/* <Input id="my-input" aria-describedby="my-helper-text" onTouchMoveCapture={}/> */}
-          <FormHelperText></FormHelperText>
+          <Slider
+            id={constraintName}
+            disabled
+            defaultValue={30}
+            aria-label="Disabled slider"
+          />
+          <FormHelperText>{constraint.description}</FormHelperText>
         </FormControl>
       )
+      continue
+    }
+
+    if (constraint.type === 'string') {
+      filterContainer.push(
+        <FormControl key={constraintName}>
+          <InputLabel htmlFor={constraintName} sx={{ color: '#FFF' }}>
+            {constraint.title}
+          </InputLabel>
+          <Input
+            id={constraintName}
+            aria-describedby={constraintName}
+          />
+          <FormHelperText>{constraint.description}</FormHelperText>
+        </FormControl>
+      )
+      continue
     }
   }
 
