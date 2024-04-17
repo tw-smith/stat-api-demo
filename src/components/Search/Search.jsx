@@ -19,6 +19,7 @@ import { Box, Switch } from '@mui/material'
 import { createTheme, ThemeProvider } from '@mui/material/styles'
 import Filter from '../Filter/Filter'
 import DrawTools from '../DrawTools/DrawTools'
+import ProductDropdown from '../ProductDropdown/ProductsDropdown'
 
 const Search = () => {
   const theme = createTheme({
@@ -47,7 +48,6 @@ const Search = () => {
   return (
     <div className="Search" data-testid="Search">
       <div className="searchFilters">
-        <DrawTools />
         <div className={`searchContainer collectionDropdown`}>
           <ProductDropdown />
         </div>

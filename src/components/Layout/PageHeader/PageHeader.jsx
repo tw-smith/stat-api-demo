@@ -5,7 +5,7 @@ import logoFilmDrop from '../../../assets/logo-filmdrop-e84.png'
 import { useSelector } from 'react-redux'
 import { Box } from '@mui/material'
 import CartButton from '../../Cart/CartButton/CartButton'
-
+import DrawTools from '../../DrawTools/DrawTools'
 const PageHeader = () => {
   const _appConfig = useSelector((state) => state.mainSlice.appConfig)
 
@@ -39,44 +39,7 @@ const PageHeader = () => {
         )}
       </div>
       <div className="pageHeaderRight">
-        <div className="pageHeaderRightButtons">
-          {_appConfig.ANALYZE_BTN_URL && (
-            <Box
-              className="buttonLink"
-              data-testid="testAnalyzeButton"
-              onClick={() => onAnalyzeClick()}
-            >
-              <span className="pageHeaderLink pageHeaderLinkHoverable">
-                Analyze
-                <OpenInNew className="OpenIcon" />
-              </span>
-            </Box>
-          )}
-          {_appConfig.DASHBOARD_BTN_URL && (
-            <Box
-              className="buttonLink"
-              data-testid="testDashboardButton"
-              onClick={() => onDashboardClick()}
-            >
-              <span className="pageHeaderLink pageHeaderLinkHoverable">
-                Dashboard
-                <OpenInNew className="OpenIcon" />
-              </span>
-            </Box>
-          )}
-        </div>
-        {!('SHOW_BRAND_LOGO' in _appConfig) || _appConfig.SHOW_BRAND_LOGO ? (
-          <a
-            href="https://element84.com/filmdrop"
-            title="Learn more about FilmDrop"
-          >
-            <img
-              src={logoFilmDrop}
-              alt="FilmDrop by Element 84"
-              className="headerLogoImage filmDrop"
-            />
-          </a>
-        ) : null}
+        <DrawTools />
         {_appConfig.CART_ENABLED ? (
           <Box className="cartButtonHeaderBar">
             <CartButton></CartButton>
