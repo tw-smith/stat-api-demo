@@ -82,7 +82,7 @@ export const customSearchPolygonStyle = {
 }
 
 export function mapClickHandler(e) {
-  if (store.getState().mainSlice.isDrawingEnabled) {
+  if (store.getState().mainSlice.isDrawingEnabled != null) {
     return
   }
   const map = store.getState().mainSlice.map
@@ -605,12 +605,14 @@ export function enableMapPolyDrawing() {
       map.eachLayer(function (layer) {
         if (layer.layer_name === 'drawBoundsLayer') {
           const drawLayer = e.layer
-          drawLayer.setStyle(customSearchPolygonStyle)
+          if(drawLayer.Type === 'polygon') {
+            drawLayer.setStyle(customSearchPolygonStyle)
+          }
           drawLayer.options.interactive = false
           layer.addLayer(drawLayer)
           const data = layer.toGeoJSON()
           store.dispatch(setsearchGeojsonBoundary(data.features[0]))
-          store.dispatch(setisDrawingEnabled(false))
+          store.dispatch(setisDrawingEnabled(null))
         }
       })
     })
@@ -632,7 +634,6 @@ export function enableMapPointDrawing() {
 
     // save drawn items
     map.on(L.Draw.Event.CREATED, (e) => {
-      console.log('here')
       e.layer.options.color = '#00FF00'
       map.eachLayer(function (layer) {
         if (layer.layer_name === 'drawBoundsLayer') {
@@ -642,7 +643,7 @@ export function enableMapPointDrawing() {
 
           const data = layer.toGeoJSON()
           store.dispatch(setsearchGeojsonBoundary(data.features[0]))
-          store.dispatch(setisDrawingEnabled(false))
+          store.dispatch(setisDrawingEnabled(null))
         }
       })
     })

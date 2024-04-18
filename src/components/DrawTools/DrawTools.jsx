@@ -1,4 +1,4 @@
-import React from 'react'
+import { React,  useEffect } from 'react'
 import { Box } from '@mui/material'
 import { createTheme, ThemeProvider } from '@mui/material/styles'
 import Button from '@mui/material/Button'
@@ -36,7 +36,7 @@ const DrawTools = () => {
       return
     }
     dispatch(setshowSearchByGeom(!_showSearchByGeom))
-    dispatch(setisDrawingEnabled(true))
+    dispatch(setisDrawingEnabled('area'))
     enableMapPolyDrawing()
   }
 
@@ -45,7 +45,7 @@ const DrawTools = () => {
       return
     }
     dispatch(setshowSearchByGeom(!_showSearchByGeom))
-    dispatch(setisDrawingEnabled(true))
+    dispatch(setisDrawingEnabled('point'))
     enableMapPointDrawing()
   }
 
@@ -76,6 +76,13 @@ const DrawTools = () => {
   const _selectedProductData = useSelector(
     (state) => state.mainSlice.selectedProductData
   )
+
+  useEffect(() => {
+    // clear drawing when switching products
+    onClearButtonClicked()
+
+  }, [_selectedProductData])
+
   const allowsPoint =
     _selectedProductData &&
     _selectedProductData.conformsTo &&
