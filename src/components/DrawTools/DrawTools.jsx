@@ -1,6 +1,6 @@
 import { Box, Switch } from '@mui/material'
 import { ThemeProvider, createTheme } from '@mui/material/styles'
-import { useSelector } from 'react-redux'
+import { useSelector , useDispatch } from 'react-redux'
 import 'react-tooltip/dist/react-tooltip.css'
 import {
   setautoCenterOnItemChanged,
@@ -12,6 +12,7 @@ import {
 import { clearLayer, enableMapPolyDrawing } from '../../utils/mapHelper'
 
 const DrawTools = () => {
+  const dispatch = useDispatch()
   const _appConfig = useSelector((state) => state.mainSlice.appConfig)
 
   const _showSearchByGeom = useSelector(
