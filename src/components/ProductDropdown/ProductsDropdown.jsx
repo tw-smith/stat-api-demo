@@ -24,7 +24,7 @@ const Dropdown = () => {
   useEffect(() => {
 
     if (_productsData.length > 0) {
-      setSelectedProductId(_productsData[2].id);
+      setSelectedProductId(_productsData[0].id);
     }
   }, [_productsData])
 

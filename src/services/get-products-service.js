@@ -2,16 +2,6 @@ import { setProductsData } from "../redux/slices/mainSlice"
 import { store } from '../redux/store'
 
 export async function GetProductsService() {
-    await fetch(
-        '/landsat/products',
-    {
-        method: 'GET'
-    }
-    )
-    .then((response) => {
-        return response.json
-    });
-
     // const allProductRequests = ALL_PROVIDERS.map(async provider => {
     //     return fetch('/api/products', {
     //         headers: new Headers({
@@ -458,7 +448,7 @@ export async function GetProductsService() {
             }
         }
     ]
-    const umbraProducts = [
+    let umbraProducts = [
         {
             "type": "Product",
             "conformsTo": [
@@ -623,6 +613,18 @@ export async function GetProductsService() {
         }
     ]
 
-    store.dispatch(setProductsData([...eusiProducts, ...umbraProducts, ...planetProducts]))
+    // TODO: PUT ENDPOINT HERE
+    const endpoint = '/landsat/products'
+    await fetch(
+        endpoint,
+    {
+        method: 'GET'
+    }
+    ).then(async res => await res.json())
+    .then((data) => {
+        console.log(data)
+        umbraProducts = data.products
+        store.dispatch(setProductsData([...eusiProducts, ...umbraProducts, ...planetProducts]))
+    });
 
 }
