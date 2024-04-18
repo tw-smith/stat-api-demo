@@ -4,6 +4,8 @@ import {
   FormHelperText,
   Input,
   InputLabel,
+  MenuItem,
+  Select,
   Slider,
   Stack
 } from '@mui/material'
@@ -105,6 +107,14 @@ const Filter = () => {
         }
       },
 
+      MuiSelect: {
+        styleOverrides: {
+          root: {
+            color: '#fff'
+          }
+        }
+      },
+
       MuiSwitch: {
         styleOverrides: {
           switchBase: {
@@ -135,7 +145,7 @@ const Filter = () => {
         _selectedProductData.parameters.properties[constraintName]
       if (constraint.type === 'number') {
         filterContainer.push(
-          <FormControl key={constraintName}>
+          <FormControl key={constraintName} sx={{ marginTop: 4 }}>
             <InputLabel
               htmlFor={constraintName}
               sx={{ color: '#FFF', paddingTop: 2 }}
@@ -146,7 +156,7 @@ const Filter = () => {
               id={constraintName}
               name={constraintName}
               defaultValue={30}
-              aria-label="Disabled slider"
+              valueLabelDisplay="on"
             />
             <FormHelperText sx={{ color: '#FFF', paddingTop: 3.5 }}>
               {constraint.description}
@@ -175,6 +185,40 @@ const Filter = () => {
         )
         continue
       }
+
+      if (constraint.type === 'array') {
+        let refItem = {}
+        if (constraint.items.$ref) {
+          const refName = constraint.items.$ref.split('/').pop()
+          refItem = _selectedProductData.parameters.$defs[refName]
+        }
+
+        const options = []
+
+        for (const option of refItem?.enum || []) {
+          options.push(
+            <MenuItem key={option} value={option}>
+              {option}
+            </MenuItem>
+          )
+        }
+
+        filterContainer.push(
+          <FormControl key={constraintName}>
+            <InputLabel
+              htmlFor={constraintName}
+              sx={{ color: '#FFF', paddingTop: 0 }}
+            >
+              {constraint.title}
+            </InputLabel>
+            <Select id={constraintName} name={constraintName}>
+              {options}
+            </Select>
+            <FormHelperText>{constraint.description}</FormHelperText>
+          </FormControl>
+        )
+        continue
+      }
     }
   }
 
@@ -193,10 +237,9 @@ const Filter = () => {
       }
     }
 
-    console.log(res)
-
-    newSearch()
-    dispatch(setshowSearchByGeom(false))
+    console.log('Parameters: ', res)
+    newSearch(res)
+    // dispatch(setshowSearchByGeom(false))
   }
 
   return (

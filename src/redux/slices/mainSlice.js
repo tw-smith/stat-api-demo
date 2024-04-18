@@ -26,7 +26,7 @@ const initialState = {
   localGridData: {},
   hasCollectionChanged: false,
   showSearchByGeom: false,
-  isDrawingEnabled: false,
+  isDrawingEnabled: null,
   mapDrawPolygonHandler: null,
   mapDrawPointHandler: null,
   searchGeojsonBoundary: null,
