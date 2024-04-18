@@ -27,72 +27,77 @@ import debounce from './debounce'
 import { AddMosaicService } from '../services/post-mosaic-service'
 
 export function newSearch() {
-  clearMapSelection()
-  clearAllLayers()
-  store.dispatch(setSearchResults(null))
-  store.dispatch(setShowZoomNotice(false))
-  store.dispatch(setSearchLoading(false))
+  // clearMapSelection()
+  // clearAllLayers()
+  // store.dispatch(setSearchResults(null))
+  // store.dispatch(setShowZoomNotice(false))
+  // store.dispatch(setSearchLoading(false))
 
-  const _selectedCollection = store.getState().mainSlice.selectedCollectionData
+  const searchScenesParams = {}
+  SearchService(searchScenesParams)
 
-  const midZoomLevel =
-    store.getState().mainSlice.appConfig.SEARCH_MIN_ZOOM_LEVELS[
-      _selectedCollection.id
-    ]?.medium || DEFAULT_MED_ZOOM
 
-  const highZoomLevel =
-    store.getState().mainSlice.appConfig.SEARCH_MIN_ZOOM_LEVELS[
-      _selectedCollection.id
-    ]?.high || DEFAULT_HIGH_ZOOM
+  // const _selectedCollection = store.getState().mainSlice.selectedCollectionData
 
-  const currentMapZoomLevel = getCurrentMapZoomLevel()
+  // const midZoomLevel =
+  //   store.getState().mainSlice.appConfig.SEARCH_MIN_ZOOM_LEVELS[
+  //     _selectedCollection.id
+  //   ]?.medium || DEFAULT_MED_ZOOM
 
-  const includesGeoHex = _selectedCollection.aggregations?.some(
-    (el) => el.name === 'grid_geohex_frequency'
-  )
-  const includesGridCode = _selectedCollection.aggregations?.some(
-    (el) => el.name === 'grid_code_frequency'
-  )
+  // const highZoomLevel =
+  //   store.getState().mainSlice.appConfig.SEARCH_MIN_ZOOM_LEVELS[
+  //     _selectedCollection.id
+  //   ]?.high || DEFAULT_HIGH_ZOOM
 
-  if (store.getState().mainSlice.viewMode !== 'scene') {
-    if (currentMapZoomLevel < 7) {
-      store.dispatch(setZoomLevelNeeded(7))
-      store.dispatch(setShowZoomNotice(true))
-      return
-    }
-    newMosaicSearch()
-    return
-  }
-  if (currentMapZoomLevel >= highZoomLevel) {
-    const searchScenesParams = buildSearchScenesParams()
-    store.dispatch(setSearchType('scene'))
-    store.dispatch(setSearchLoading(true))
-    SearchService(searchScenesParams, 'scene')
-    return
-  }
-  if (includesGeoHex && currentMapZoomLevel < midZoomLevel) {
-    const searchAggregateParams = buildSearchAggregateParams('hex')
-    store.dispatch(setSearchLoading(true))
-    store.dispatch(setSearchType('hex'))
-    AggregateSearchService(searchAggregateParams, 'hex')
-    return
-  }
-  if (includesGridCode) {
-    if (currentMapZoomLevel < midZoomLevel) {
-      store.dispatch(setZoomLevelNeeded(midZoomLevel))
-      store.dispatch(setShowZoomNotice(true))
-      return
-    }
-    const searchAggregateParams = buildSearchAggregateParams('grid-code')
-    store.dispatch(setSearchType('grid-code'))
-    store.dispatch(setSearchLoading(true))
-    AggregateSearchService(searchAggregateParams, 'grid-code')
-    return
-  }
-  if (currentMapZoomLevel < highZoomLevel) {
-    store.dispatch(setZoomLevelNeeded(highZoomLevel))
-    store.dispatch(setShowZoomNotice(true))
-  }
+  // const currentMapZoomLevel = getCurrentMapZoomLevel()
+
+  // // const includesGeoHex = _selectedCollection.aggregations?.some(
+  // //   (el) => el.name === 'grid_geohex_frequency'
+  // // )
+  // const includesGeoHex = false;
+  // const includesGridCode = _selectedCollection.aggregations?.some(
+  //   (el) => el.name === 'grid_code_frequency'
+  // )
+
+  // if (store.getState().mainSlice.viewMode !== 'scene') {
+  //   if (currentMapZoomLevel < 7) {
+  //     store.dispatch(setZoomLevelNeeded(7))
+  //     store.dispatch(setShowZoomNotice(true))
+  //     return
+  //   }
+  //   newMosaicSearch()
+  //   return
+  // }
+  // if (currentMapZoomLevel >= highZoomLevel) {
+  //   const searchScenesParams = buildSearchScenesParams()
+  //   store.dispatch(setSearchType('scene'))
+  //   store.dispatch(setSearchLoading(true))
+  //   SearchService(searchScenesParams, 'scene')
+  //   return
+  // }
+  // if (includesGeoHex && currentMapZoomLevel < midZoomLevel) {
+  //   const searchAggregateParams = buildSearchAggregateParams('hex')
+  //   store.dispatch(setSearchLoading(true))
+  //   store.dispatch(setSearchType('hex'))
+  //   AggregateSearchService(searchAggregateParams, 'hex')
+  //   return
+  // }
+  // if (includesGridCode) {
+  //   if (currentMapZoomLevel < midZoomLevel) {
+  //     store.dispatch(setZoomLevelNeeded(midZoomLevel))
+  //     store.dispatch(setShowZoomNotice(true))
+  //     return
+  //   }
+  //   const searchAggregateParams = buildSearchAggregateParams('grid-code')
+  //   store.dispatch(setSearchType('grid-code'))
+  //   store.dispatch(setSearchLoading(true))
+  //   AggregateSearchService(searchAggregateParams, 'grid-code')
+  //   return
+  // }
+  // if (currentMapZoomLevel < highZoomLevel) {
+  //   store.dispatch(setZoomLevelNeeded(highZoomLevel))
+  //   store.dispatch(setShowZoomNotice(true))
+  // }
 }
 
 function buildSearchScenesParams(gridCodeToSearchIn) {
@@ -167,7 +172,6 @@ function buildSearchAggregateParams(gridType) {
     store.getState().mainSlice.searchGeojsonBoundary
   const collections = _selectedCollection.id
 
-  let aggregations
   if (gridType === 'hex') {
     const currentMapZoomLevel = getCurrentMapZoomLevel()
     let precision
