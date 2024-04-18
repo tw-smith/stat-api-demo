@@ -26,16 +26,48 @@ import * as h3 from 'h3-js'
 import debounce from './debounce'
 import { AddMosaicService } from '../services/post-mosaic-service'
 
-export function newSearch() {
-  // clearMapSelection()
-  // clearAllLayers()
-  // store.dispatch(setSearchResults(null))
-  // store.dispatch(setShowZoomNotice(false))
-  // store.dispatch(setSearchLoading(false))
+export function newSearch(filters) {
+  const geometry = store.getState().mainSlice.searchGeojsonBoundary
+  const dates = store.getState().mainSlice.searchDateRangeValue
+  const productId = store.getState().mainSlice.selectedProductData.id
+  console.log(geometry, dates, filters)
 
-  const searchScenesParams = {}
-  SearchService(searchScenesParams)
+  const query = {
+    product_id: productId,
+    datetime: `${dates[0]}/${dates[1]}`,
+    geometry: geometry.geometry,
+    filter: {
+      op: 'and',
+      args: []
+    }
+  }
 
+  for (const [key, value] of Object.entries(filters)) {
+    const lowerBounds = {
+      op: '>=',
+      args: [
+        {
+          property: key
+        },
+        value[0]
+      ]
+    }
+    query.filter.args.push(lowerBounds)
+    const upperBounds = {
+      op: '<=',
+      args: [
+        {
+          property: key
+        },
+        value[1]
+      ]
+    }
+    query.filter.args.push(upperBounds)
+  }
+
+  console.log(query)
+
+  SearchService(query)
 
   // const _selectedCollection = store.getState().mainSlice.selectedCollectionData
 

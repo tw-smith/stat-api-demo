@@ -189,21 +189,24 @@ const Filter = () => {
 
   function processSearchBtn(formEvent) {
     formEvent.preventDefault()
-
+    /*
     const keys = Object.keys(formEvent.target).slice(0, -2)
     let res = {}
+    console.log(_selectedProductFilters)
 
     for (const key of keys) {
       if (formEvent.target[key].value) {
+            console.log(formEvent.formEvent.target[key])
+
         res = {
           ...res,
           [formEvent.target[key].name]: formEvent.target[key].value
         }
       }
-    }
+    } */
 
-    console.log('Parameters: ', res)
-    newSearch(res)
+    console.log('Parameters: ', _selectedProductFilters)
+    newSearch(_selectedProductFilters)
     // dispatch(setshowSearchByGeom(false))
   }
 
