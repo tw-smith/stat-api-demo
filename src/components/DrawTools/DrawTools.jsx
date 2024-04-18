@@ -36,7 +36,7 @@ const DrawTools = () => {
       return
     }
     dispatch(setshowSearchByGeom(!_showSearchByGeom))
-    dispatch(setisDrawingEnabled(true))
+    dispatch(setisDrawingEnabled('area'))
     enableMapPolyDrawing()
   }
 
@@ -45,7 +45,7 @@ const DrawTools = () => {
       return
     }
     dispatch(setshowSearchByGeom(!_showSearchByGeom))
-    dispatch(setisDrawingEnabled(true))
+    dispatch(setisDrawingEnabled('point'))
     enableMapPointDrawing()
   }
 

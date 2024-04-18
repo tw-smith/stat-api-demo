@@ -82,7 +82,7 @@ export const customSearchPolygonStyle = {
 }
 
 export function mapClickHandler(e) {
-  if (store.getState().mainSlice.isDrawingEnabled) {
+  if (store.getState().mainSlice.isDrawingEnabled != null) {
     return
   }
   const map = store.getState().mainSlice.map
@@ -612,7 +612,7 @@ export function enableMapPolyDrawing() {
           layer.addLayer(drawLayer)
           const data = layer.toGeoJSON()
           store.dispatch(setsearchGeojsonBoundary(data.features[0]))
-          store.dispatch(setisDrawingEnabled(false))
+          store.dispatch(setisDrawingEnabled(null))
         }
       })
     })
@@ -643,7 +643,7 @@ export function enableMapPointDrawing() {
 
           const data = layer.toGeoJSON()
           store.dispatch(setsearchGeojsonBoundary(data.features[0]))
-          store.dispatch(setisDrawingEnabled(false))
+          store.dispatch(setisDrawingEnabled(null))
         }
       })
     })

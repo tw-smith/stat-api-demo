@@ -43,7 +43,7 @@ const LeftContent = () => {
   return (
     <div className="LeftContent">
       <div className="LeftContentHolder">
-        {_isDrawingEnabled || _searchLoading ? (
+        {_isDrawingEnabled != null || _searchLoading ? (
           <div
             className="disableSearchOverlay"
             data-testid="test_disableSearchOverlay"

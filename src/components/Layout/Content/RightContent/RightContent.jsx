@@ -87,7 +87,7 @@ const RightContent = () => {
   }
 
   function onCancelDrawGeomClicked() {
-    dispatch(setisDrawingEnabled(false))
+    dispatch(setisDrawingEnabled(null))
     disableMapPolyDrawing()
   }
 
@@ -214,7 +214,7 @@ const RightContent = () => {
       </div>
       {_searchResults?.numberMatched &&
       _searchResults?.searchType !== 'AggregatedResults' &&
-      !_isDrawingEnabled ? (
+      _isDrawingEnabled == null ? (
         <div className="resultCount" data-testid="testShowingScenesMessage">
           <div
             className={
@@ -285,7 +285,7 @@ const RightContent = () => {
         </div>
       ) : null}
       {_searchResults?.searchType === 'AggregatedResults' &&
-      !_isDrawingEnabled ? (
+      _isDrawingEnabled == null ? (
         <div className="resultCount" data-testid="testShowingAggregatedMessage">
           <div className="resultCountText">
             <strong>Showing Aggregated Results</strong>
@@ -297,7 +297,7 @@ const RightContent = () => {
         </div>
       ) : null}
       {_searchResults?.searchType !== 'AggregatedResults' &&
-      !_isDrawingEnabled &&
+      _isDrawingEnabled == null &&
       _searchResults &&
       _searchResults.features?.length === 0 ? (
         <div className="resultCount">
@@ -334,14 +334,18 @@ const RightContent = () => {
           <span>Loading {_appName}</span>
         </div>
       )}
-      {_isDrawingEnabled ? (
+      {_isDrawingEnabled != null && (
         <div className="drawGeomMessage">
           <div className="drawGeomMessageText">
             <span className="drawGeomMessageTextTitle">
-              Draw Tasking Area
+              {_isDrawingEnabled === 'area'
+                ? 'Draw Tasking Area'
+                : 'Select Tasking Point'}
             </span>
             <span>
-              Click the map to add points. Click the first point to finish.
+              {_isDrawingEnabled === 'area'
+                ? 'Click the map to add points. Click the first point to finish.'
+                : 'Click the map to add center point'}
             </span>
           </div>
           <div className="drawGeomMessageButtons">
@@ -353,7 +357,7 @@ const RightContent = () => {
             </button>
           </div>
         </div>
-      ) : null}
+      )}
       {_searchGeojsonBoundary ||
       (_searchType && _searchResults) ||
       _cartItems.length > 0 ? (
