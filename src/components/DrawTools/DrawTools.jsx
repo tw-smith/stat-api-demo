@@ -1,5 +1,5 @@
 import { React,  useEffect } from 'react'
-import { Box } from '@mui/material'
+import { Box, Typography } from '@mui/material'
 import { createTheme, ThemeProvider } from '@mui/material/styles'
 import Button from '@mui/material/Button'
 import { useSelector, useDispatch } from 'react-redux'
@@ -69,7 +69,8 @@ const DrawTools = () => {
       },
       secondary: {
         main: '#4f5768'
-      }
+      },
+      textLabel: '#A9B0C1'
     }
   })
 
@@ -95,6 +96,10 @@ const DrawTools = () => {
   return (
     <ThemeProvider theme={theme}>
       <div className="searchContainer searchBoundary">
+        <Typography variant="body2" color="textLabel">
+          Collection Type{' '}
+        </Typography>
+
         <Box className="searchFilterContainer">
           <div
             style={{
@@ -108,6 +113,7 @@ const DrawTools = () => {
               variant="contained"
               onClick={onDrawBoundaryClicked}
               disabled={!allowsPolygon}
+              size="small"
             >
               Area
             </Button>
@@ -116,6 +122,7 @@ const DrawTools = () => {
               variant="contained"
               onClick={onPointClicked}
               disabled={!allowsPoint}
+              size="small"
             >
               Point
             </Button>
@@ -123,6 +130,7 @@ const DrawTools = () => {
               color="primary"
               variant="outline"
               onClick={onClearButtonClicked}
+              size="small"
             >
               Clear
             </Button>

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import './DateTimeRangeSelector.css'
+import {  Typography } from '@mui/material'
 import { useSelector, useDispatch } from 'react-redux'
 import 'react-tooltip/dist/react-tooltip.css'
 import { setSearchDateRangeValue } from '../../redux/slices/mainSlice'
@@ -9,7 +10,7 @@ import 'react-datepicker/dist/react-datepicker.css'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
 import { convertToUTC } from '../../utils/datetime'
-
+import {  ThemeProvider, createTheme } from '@mui/material/styles'
 const DateTimeRangeSelector = () => {
   dayjs.extend(utc)
   const dispatch = useDispatch()
@@ -101,68 +102,79 @@ const DateTimeRangeSelector = () => {
     }
   }, [])
 
+    const theme = createTheme({
+      palette: {
+        primary: {
+          main: '#DEDEDE'
+        },
+        secondary: {
+          main: '#4f5768'
+        }
+      }
+    })
+
   return (
-    <div className="datePicker">
-      <label>
-        Date Range <span className="datePickerLabelUTCText">(UTC)</span>{' '}
-        {!startDate || !endDate ? (
-          <span className="error-true">
-            <em>Required</em>
-          </span>
-        ) : null}
-      </label>
-      <div className="datePickerContainer">
-        <DatePicker
-          className="reactDatePicker"
-          selected={
-            startDate instanceof Date
-              ? startDate.setHours(0, 0, 0)
-              : new Date(startDate)
-          }
-          maxDate={endDate}
-          showPopperArrow={false}
-          todayButton="Today"
-          showIcon
-          icon={
-            <CalendarTodayIcon className="datePicker-icon"></CalendarTodayIcon>
-          }
-          toggleCalendarOnIconClick
-          closeOnScroll={true}
-          peekNextMonth
-          showMonthDropdown
-          showYearDropdown
-          dropdownMode="select"
-          dateFormat="yyyy-MM-dd"
-          popperPlacement="top-end"
-          onChange={(date) => setstartDate(date)}
-        ></DatePicker>
-        <span className="dateRangeSpanText">to</span>
-        <DatePicker
-          className="reactDatePicker"
-          selected={
-            endDate instanceof Date
-              ? endDate.setHours(23, 59, 59)
-              : new Date(endDate)
-          }
-          minDate={startDate}
-          maxDate={new Date()}
-          showPopperArrow={false}
-          todayButton="Today"
-          showIcon
-          icon={
-            <CalendarTodayIcon className="datePicker-icon"></CalendarTodayIcon>
-          }
-          toggleCalendarOnIconClick
-          closeOnScroll={true}
-          showMonthDropdown
-          showYearDropdown
-          dropdownMode="select"
-          dateFormat="yyyy-MM-dd"
-          popperPlacement="top-end"
-          onChange={(date) => setendDate(date)}
-        ></DatePicker>
+    <ThemeProvider theme={theme}>
+      <div className="datePicker">
+        <Typography variant="body2">
+          Collection Range <span className="datePickerLabelUTCText">(UTC)</span>{' '}
+        </Typography>
+
+        <div className="datePickerContainer">
+          <DatePicker
+            className="reactDatePicker"
+            selected={
+              startDate instanceof Date
+                ? startDate.setHours(0, 0, 0)
+                : new Date(startDate)
+            }
+            maxDate={endDate}
+            showPopperArrow={false}
+            todayButton="Today"
+            showIcon
+            icon={
+              <CalendarTodayIcon className="datePicker-icon"></CalendarTodayIcon>
+            }
+            toggleCalendarOnIconClick
+            closeOnScroll={true}
+            peekNextMonth
+            showMonthDropdown
+            showYearDropdown
+            dropdownMode="select"
+            dateFormat="yyyy-MM-dd"
+            popperPlacement="top-end"
+            onChange={(date) => setstartDate(date)}
+            portalId="root"
+          ></DatePicker>
+          <span className="dateRangeSpanText">to</span>
+          <DatePicker
+            className="reactDatePicker"
+            selected={
+              endDate instanceof Date
+                ? endDate.setHours(23, 59, 59)
+                : new Date(endDate)
+            }
+            minDate={startDate}
+            maxDate={new Date()}
+            showPopperArrow={false}
+            todayButton="Today"
+            showIcon
+            icon={
+              <CalendarTodayIcon className="datePicker-icon"></CalendarTodayIcon>
+            }
+            toggleCalendarOnIconClick
+            closeOnScroll={true}
+            showMonthDropdown
+            showYearDropdown
+            dropdownMode="select"
+            dateFormat="yyyy-MM-dd"
+            popperPlacement="top-end"
+            onChange={(date) => setendDate(date)}
+            portalId="root"
+          ></DatePicker>
+        </div>
       </div>
-    </div>
+    </ThemeProvider>
   )
 }
 

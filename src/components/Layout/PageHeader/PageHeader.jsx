@@ -1,22 +1,13 @@
 import React from 'react'
 import './PageHeader.css'
-import { OpenInNew } from '@mui/icons-material'
-import logoFilmDrop from '../../../assets/logo-filmdrop-e84.png'
-import { useSelector } from 'react-redux'
 import { Box } from '@mui/material'
-import CartButton from '../../Cart/CartButton/CartButton'
 import DrawTools from '../../DrawTools/DrawTools'
 import Logo from '../../../assets/taskingSprintLogo.svg'
+import DateTimeRangeSelector from '../../DateTimeRangeSelector/DateTimeRangeSelector'
+
 const PageHeader = () => {
-  const _appConfig = useSelector((state) => state.mainSlice.appConfig)
 
-  function onDashboardClick() {
-    window.open(_appConfig.DASHBOARD_BTN_URL, '_blank')
-  }
-
-  function onAnalyzeClick() {
-    window.open(_appConfig.ANALYZE_BTN_URL, '_blank')
-  }
+  
 
   return (
     <div className="PageHeader" data-testid="testPageHeader">
@@ -34,12 +25,9 @@ const PageHeader = () => {
 
       </div>
       <div className="pageHeaderRight">
+        <DateTimeRangeSelector />
         <DrawTools />
-        {_appConfig.CART_ENABLED ? (
-          <Box className="cartButtonHeaderBar">
-            <CartButton></CartButton>
-          </Box>
-        ) : null}
+       
       </div>
     </div>
   )
