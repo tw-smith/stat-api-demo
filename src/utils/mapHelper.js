@@ -605,7 +605,9 @@ export function enableMapPolyDrawing() {
       map.eachLayer(function (layer) {
         if (layer.layer_name === 'drawBoundsLayer') {
           const drawLayer = e.layer
-          drawLayer.setStyle(customSearchPolygonStyle)
+          if(drawLayer.Type === 'polygon') {
+            drawLayer.setStyle(customSearchPolygonStyle)
+          }
           drawLayer.options.interactive = false
           layer.addLayer(drawLayer)
           const data = layer.toGeoJSON()
@@ -632,7 +634,6 @@ export function enableMapPointDrawing() {
 
     // save drawn items
     map.on(L.Draw.Event.CREATED, (e) => {
-      console.log('here')
       e.layer.options.color = '#00FF00'
       map.eachLayer(function (layer) {
         if (layer.layer_name === 'drawBoundsLayer') {

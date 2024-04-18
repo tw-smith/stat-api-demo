@@ -338,7 +338,7 @@ const RightContent = () => {
         <div className="drawGeomMessage">
           <div className="drawGeomMessageText">
             <span className="drawGeomMessageTextTitle">
-              Draw Search Boundary
+              Draw Tasking Area
             </span>
             <span>
               Click the map to add points. Click the first point to finish.
