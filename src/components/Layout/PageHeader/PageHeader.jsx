@@ -6,6 +6,7 @@ import { useSelector } from 'react-redux'
 import { Box } from '@mui/material'
 import CartButton from '../../Cart/CartButton/CartButton'
 import DrawTools from '../../DrawTools/DrawTools'
+import Logo from '../../../assets/taskingSprintLogo.svg'
 const PageHeader = () => {
   const _appConfig = useSelector((state) => state.mainSlice.appConfig)
 
@@ -20,23 +21,17 @@ const PageHeader = () => {
   return (
     <div className="PageHeader" data-testid="testPageHeader">
       <div className="pageHeaderLeft">
-        {_appConfig.LOGO_URL ? (
-          <img
-            src={_appConfig.LOGO_URL}
-            alt={_appConfig.LOGO_ALT}
-            className="headerLogoImage"
-          ></img>
-        ) : (
-          <img
-            src={
-              _appConfig.PUBLIC_URL
-                ? _appConfig.PUBLIC_URL + '/logo.png'
-                : './logo.png'
-            }
-            alt="FilmDrop default app logo"
-            className="headerLogoImage"
-          />
-        )}
+
+        <img
+          src={
+            Logo
+          }
+          alt="FilmDrop default app logo"
+          className="headerLogoImage"
+        />
+
+        <h3>Berlin Tasking Sprint 2024</h3>
+
       </div>
       <div className="pageHeaderRight">
         <DrawTools />

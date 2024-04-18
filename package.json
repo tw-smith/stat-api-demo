@@ -83,7 +83,6 @@
     "typecheck": "tsc --jsx react",
     "audit-all": "npx better-npm-audit audit",
     "audit-prod": "npx better-npm-audit audit --production",
-   // "pre-commit": "./node_modules/pre-commit/hook",
     "check-markdown": "remark . --frail"
   },
   "pre-commit": {

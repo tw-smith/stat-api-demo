@@ -1,6 +1,6 @@
 {
   "PUBLIC_URL": "http://example.com/",
-  "LOGO_URL": "./logo.png",
+  "LOGO_URL": "./taskingSprintLogo.svg",
   "LOGO_ALT": "Alt description for my custom logo",
   "DEFAULT_COLLECTION": "collection-name",
   "STAC_API_URL": "https://api-endpoint.example.com",

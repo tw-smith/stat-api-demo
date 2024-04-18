@@ -17,7 +17,7 @@ deciders: Brad Andrick, Matt Hanson, Phil Varner
 ```jsonc
 {
   "PUBLIC_URL": "http://example.com/",
-  "LOGO_URL": "./logo.png",
+  "LOGO_URL": "./taskingSprintLogo.svg",
   "LOGO_ALT": "Alt description for my custom logo",
   "SHOW_PUBLISH_BTN": false,
   "DEFAULT_COLLECTION": "collection-name",
@@ -182,7 +182,7 @@ deciders: Brad Andrick, Matt Hanson, Phil Varner
     // settings for top level console/parent container app
     "APP_NAME": "Filmdrop Console",
     "APP_FAVICON": "exampleFavicon.ico",
-    "LOGO_URL": "./logo.png",
+    "LOGO_URL": "./taskingSprintLogo.svg",
     "LOGO_ALT": "Alt description for my custom logo",
     "PUBLIC_URL": "http://example.com/",
     "SHOW_BRAND_LOGO": true,

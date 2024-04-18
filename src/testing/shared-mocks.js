@@ -3445,7 +3445,7 @@ export const mockSceneSearchResult = {
 
 export const mockAppConfig = {
   PUBLIC_URL: 'http://example.com/',
-  LOGO_URL: './logo.png',
+  LOGO_URL: './taskingSprintLogo.svg',
   LOGO_ALT: 'Alt description for my custom logo',
   DEFAULT_COLLECTION: 'cop-dem-glo-30',
   STAC_API_URL: 'https://api-endpoint.example.com',
