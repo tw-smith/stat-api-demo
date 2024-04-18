@@ -1,9 +1,16 @@
 import { setProductsData } from "../redux/slices/mainSlice"
 import { store } from '../redux/store'
 
-
-// TODO: Replace with correct endpoint in the future 
 export async function GetProductsService() {
+    await fetch(
+        '/landsat/products',
+    {
+        method: 'GET'
+    }
+    )
+    .then((response) => {
+        return response.json
+    });
 
     // const allProductRequests = ALL_PROVIDERS.map(async provider => {
     //     return fetch('/api/products', {

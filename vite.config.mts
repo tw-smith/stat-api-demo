@@ -22,7 +22,15 @@ export default defineConfig({
     open: true,
     hmr: {
       overlay: false
-    }
+    },
+    cors: false,
+    proxy: {
+      '/landsat': {
+        target: 'https://qju8vxty89.execute-api.us-east-1.amazonaws.com',
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/landsat/, ''),
+      },
+    },
   },
   test: {
     globals: true,
