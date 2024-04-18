@@ -1,10 +1,10 @@
 .RightContent {
-  width: calc(100% - 300px);
+  width: calc(100% - 400px);
   height: 100%;
   background-color: #12171a;
   display: flex;
   position: absolute;
-  left: 300px;
+  left: 400px;
 }
 
 .ZoomNotice {

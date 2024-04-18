@@ -209,7 +209,7 @@ const Filter = () => {
 
   return (
     <ThemeProvider theme={theme}>
-      <div className="" data-testid="Search">
+      <div style={{'padding':'15px'}} data-testid="Search">
         <form onSubmit={processSearchBtn}>
           <Stack gap={4}>{filterContainer}</Stack>
 
