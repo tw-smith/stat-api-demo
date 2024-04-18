@@ -1,5 +1,4 @@
 import {
-  Box,
   FormControl,
   FormHelperText,
   Input,
@@ -12,69 +11,20 @@ import {
 import { ThemeProvider, createTheme } from '@mui/material/styles'
 import { useDispatch, useSelector } from 'react-redux'
 import 'react-tooltip/dist/react-tooltip.css'
-import { setshowSearchByGeom } from '../../redux/slices/mainSlice'
+import { setSelectedProductFilters } from '../../redux/slices/mainSlice'
+import { store } from '../../redux/store'
 import { newSearch } from '../../utils/searchHelper'
 import './Filter.css'
-
-// const SELECTED_PRODUCT = {
-//   type: 'Product',
-//   conformsTo: [
-//     'https://api.statspec.org/geojson#polygon',
-//     'https://api.statspec.org/geojson#multipolygon'
-//   ],
-//   id: 'umbra_archive_catalog',
-//   title: 'Umbra Archive Catalog',
-//   description:
-//     'Umbra SAR Images served by the Archive Catalog. Way more detail here or a link down in links to Product documentation.',
-//   keywords: ['SAR', 'Archive'],
-//   license: 'CC-BY-4.0',
-//   providers: {
-//     name: 'Umbra',
-//     description: 'Global Omniscience',
-//     roles: ['producer'],
-//     url: 'https://umbra.space'
-//   },
-//   links: {
-//     href: 'https://docs.canopy.umbra.space/',
-//     rel: 'documentation',
-//     type: 'docs',
-//     title: 'Canopy Documentation'
-//   },
-//   parameters: {
-//     description: 'Umbra Archive Catalog Parameters docstring yay!',
-//     properties: {
-//       'sar:resolution_range': {
-//         type: 'number',
-//         minimum: 0.25,
-//         maximum: 1,
-//         description:
-//           'The range resolution of the SAR Image. This is equivalent to the resolution of the ground plane projected GEC Cloud-Optimized Geotiff',
-//         title: 'Range Resolution (m)'
-//       },
-//       'sar:looks_azimuth': {
-//         type: 'number',
-//         minimum: 1,
-//         maximum: 10,
-//         description:
-//           'The azimuth looks in the SAR Image. This value times the sar:resolution_range gives the azimuth resolution of the complex products.',
-//         title: 'Looks Azimuth (m)'
-//       },
-//       platform: {
-//         description: 'The satellites to consider for this Opportunity.',
-//         title: 'Platform (Satellite)',
-//         type: 'string',
-//         regex: 'Umbra-\\d{2}'
-//       }
-//     },
-//     title: 'UmbraArchiveCatalogParameters',
-//     type: 'object'
-//   }
-// }
 
 const Filter = () => {
   const dispatch = useDispatch()
   const _selectedCollectionData = useSelector(
     (state) => state.mainSlice.selectedCollectionData
+  )
+
+  // State that should contain the selected filters
+  const _selectedProductFilters = useSelector(
+    (state) => state.mainSlice.selectedProductFilters
   )
   const _selectedProductData = useSelector(
     (state) => state.mainSlice.selectedProductData
@@ -155,8 +105,18 @@ const Filter = () => {
             <Slider
               id={constraintName}
               name={constraintName}
-              defaultValue={30}
               valueLabelDisplay="on"
+              min={constraint.minimum}
+              max={constraint.maximum}
+              value={_selectedProductFilters[constraintName] || [0, 0]} // TODO: this should be managed by redux, but it's not working right now :) (the other controls should also be added on redux)
+              onChange={(event, newValue) => {
+                store.dispatch(
+                  setSelectedProductFilters({
+                    ..._selectedProductFilters,
+                    [constraintName]: newValue
+                  })
+                )
+              }}
             />
             <FormHelperText sx={{ color: '#FFF', paddingTop: 3.5 }}>
               {constraint.description}
@@ -187,6 +147,11 @@ const Filter = () => {
       }
 
       if (constraint.type === 'array') {
+        // TODO for umbras case we need to add a check for the $ref property, if it exists we need to get the enum values from the $ref object
+        // and populate the dropdown with those values
+        // otherwise just take the enum values from the parameter properties
+        // its not working for the last umbra json but maybe after the changes it will?
+
         let refItem = {}
         if (constraint.items.$ref) {
           const refName = constraint.items.$ref.split('/').pop()
