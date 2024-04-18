@@ -28,6 +28,7 @@ const initialState = {
   showSearchByGeom: false,
   isDrawingEnabled: false,
   mapDrawPolygonHandler: null,
+  mapDrawPointHandler: null,
   searchGeojsonBoundary: null,
   showUploadGeojsonModal: false,
   showApplicationAlert: false,
@@ -130,6 +131,9 @@ export const mainSlice = createSlice({
     setmapDrawPolygonHandler: (state, action) => {
       state.mapDrawPolygonHandler = action.payload
     },
+    setmapDrawPointHandler: (state, action) => {
+      state.mapDrawPointHandler = action.payload
+    },
     setsearchGeojsonBoundary: (state, action) => {
       state.searchGeojsonBoundary = action.payload
     },
@@ -212,6 +216,7 @@ export const { sethasCollectionChanged } = mainSlice.actions
 export const { setshowSearchByGeom } = mainSlice.actions
 export const { setisDrawingEnabled } = mainSlice.actions
 export const { setmapDrawPolygonHandler } = mainSlice.actions
+export const { setmapDrawPointHandler } = mainSlice.actions
 export const { setsearchGeojsonBoundary } = mainSlice.actions
 export const { setshowUploadGeojsonModal } = mainSlice.actions
 export const { setshowApplicationAlert } = mainSlice.actions

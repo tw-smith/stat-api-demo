@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from 'react-redux'
 import {
   setMap,
   setmapDrawPolygonHandler,
+  setmapDrawPointHandler,
   setshowMapAttribution
 } from '../../redux/slices/mainSlice'
 import * as L from 'leaflet'
@@ -140,8 +141,10 @@ const LeafMap = () => {
       const drawPolygonHandler = new L.Draw.Polygon(map, {
         shapeOptions: { color: '#00C07B' }
       })
-
       dispatch(setmapDrawPolygonHandler(drawPolygonHandler))
+
+      const drawPointHandler = new L.Draw.Marker(map)
+      dispatch(setmapDrawPointHandler(drawPointHandler))
 
       // set up map events
       map.on('zoomend', function () {

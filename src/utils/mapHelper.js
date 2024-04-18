@@ -624,6 +624,38 @@ export function disableMapPolyDrawing() {
   }
 }
 
+export function enableMapPointDrawing() {
+  const map = store.getState().mainSlice.map
+  if (map && Object.keys(map).length > 0) {
+    clearLayer('drawBoundsLayer')
+    store.getState().mainSlice.mapDrawPointHandler.enable()
+
+    // save drawn items
+    map.on(L.Draw.Event.CREATED, (e) => {
+      console.log('here')
+      e.layer.options.color = '#00FF00'
+      map.eachLayer(function (layer) {
+        if (layer.layer_name === 'drawBoundsLayer') {
+          const drawLayer = e.layer
+          drawLayer.options.interactive = false
+          layer.addLayer(drawLayer)
+
+          const data = layer.toGeoJSON()
+          store.dispatch(setsearchGeojsonBoundary(data.features[0]))
+          store.dispatch(setisDrawingEnabled(false))
+        }
+      })
+    })
+  }
+}
+
+export function disableMapPointDrawing() {
+  const map = store.getState().mainSlice.map
+  if (map && Object.keys(map).length > 0) {
+    store.getState().mainSlice.mapDrawPointHandler.disable()
+  }
+}
+
 export function addUploadedGeojsonToMap(geojson) {
   const map = store.getState().mainSlice.map
   if (map && Object.keys(map).length > 0) {

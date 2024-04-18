@@ -165,7 +165,11 @@ const Filter = () => {
             >
               {constraint.title}
             </InputLabel>
-            <Input id={constraintName} name={constraintName} aria-describedby={constraintName} />
+            <Input
+              id={constraintName}
+              name={constraintName}
+              aria-describedby={constraintName}
+            />
             <FormHelperText>{constraint.description}</FormHelperText>
           </FormControl>
         )
@@ -182,7 +186,10 @@ const Filter = () => {
 
     for (const key of keys) {
       if (formEvent.target[key].value) {
-        res = { ...res, [formEvent.target[key].name]: formEvent.target[key].value }
+        res = {
+          ...res,
+          [formEvent.target[key].name]: formEvent.target[key].value
+        }
       }
     }
 
