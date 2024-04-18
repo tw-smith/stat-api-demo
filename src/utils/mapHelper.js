@@ -1,5 +1,6 @@
 import * as L from 'leaflet'
 import 'leaflet-draw'
+import * as turf from '@turf/turf'
 import { store } from '../redux/store'
 import { colorMap } from './colorMap'
 import {
@@ -93,13 +94,13 @@ export function mapClickHandler(e) {
 
     clearMapSelection()
 
-    if (
-      e.originalEvent.detail === 2 ||
-      store.getState().mainSlice.viewMode === 'mosaic' ||
-      _searchType === 'hex'
-    ) {
-      return
-    }
+    // if (
+    //   e.originalEvent.detail === 2 ||
+    //   store.getState().mainSlice.viewMode === 'mosaic' ||
+    //   _searchType === 'hex'
+    // ) {
+    //   return
+    // }
 
     // pull all items from search results that intersect with the click bounds
     let intersectingFeatures = []
@@ -110,33 +111,39 @@ export function mapClickHandler(e) {
         const featureBounds = L.geoJSON(feature).getBounds()
         if (featureBounds && featureBounds.intersects(clickBounds)) {
           // highlight layer
-          const clickedFootprintsFound = L.geoJSON(feature, {
-            style: clickedFootprintLayerStyle
-          })
-          map.eachLayer(function (layer) {
-            if (layer.layer_name === 'clickedSceneHighlightLayer') {
-              clickedFootprintsFound.addTo(layer)
-            }
-          })
+          // const clickedFootprintsFound = L.geoJSON(feature, {
+          //   style: clickedFootprintLayerStyle
+          // })
+          // map.eachLayer(function (layer) {
+          //   if (layer.layer_name === 'clickedSceneHighlightLayer') {
+          //     clickedFootprintsFound.addTo(layer)
+          //   }
+          // })
           intersectingFeatures = [...intersectingFeatures, feature]
           if (intersectingFeatures.length === 0) {
             store.dispatch(setClickResults([]))
           }
-          if (_searchType === 'scene') {
-            // if at least one feature found, push to store
-            if (intersectingFeatures.length > 0) {
-              // push to store
-              store.dispatch(setClickResults(intersectingFeatures))
-              store.dispatch(settabSelected('details'))
-              store.dispatch(sethasLeftPanelTabChanged(true))
-            }
-          } else if (_searchType === 'grid-code') {
-            for (const i in intersectingFeatures) {
-              const feature = intersectingFeatures[i]
-              // fetch all scenes from API with matching grid code
-              gridCodesToSearch.push(feature.properties['grid:code'])
-            }
+          if (intersectingFeatures.length > 0) {
+            // push to store
+            store.dispatch(setClickResults(intersectingFeatures))
+            store.dispatch(settabSelected('details'))
+            store.dispatch(sethasLeftPanelTabChanged(true))
           }
+          // if (_searchType === 'scene') {
+          //   // if at least one feature found, push to store
+          //   if (intersectingFeatures.length > 0) {
+          //     // push to store
+          //     store.dispatch(setClickResults(intersectingFeatures))
+          //     store.dispatch(settabSelected('details'))
+          //     store.dispatch(sethasLeftPanelTabChanged(true))
+          //   }
+          // } else if (_searchType === 'grid-code') {
+          //   for (const i in intersectingFeatures) {
+          //     const feature = intersectingFeatures[i]
+          //     // fetch all scenes from API with matching grid code
+          //     gridCodesToSearch.push(feature.properties['grid:code'])
+          //   }
+          // }
         }
       }
       if (_searchType === 'grid-code') {
@@ -144,6 +151,15 @@ export function mapClickHandler(e) {
       }
     }
   }
+}
+
+function addDisplayRadialBufferToLayer(layer, geojson, bufferRadius = 10) {
+  geojson.features.forEach(feature => {
+    if(feature.geometry.type == 'Point'){
+      let bufferedOpportunity = turf.buffer(feature, bufferRadius, {units: 'kilometers'})
+      L.geoJson(bufferedOpportunity).addTo(layer);
+    }
+    });
 }
 
 export function selectMappedScenes() {
@@ -175,6 +191,11 @@ export function addDataToLayer(geojson, layerName, options, clearExisting) {
           clearLayer(layerName) // clear layer before adding new
         }
         if (options !== 'undefined') {
+          let geojsonToDisplay = geojson
+          if (layer.layer_name === 'searchResultsLayer') {
+            const buffer = 1000/map.getZoom();
+            addDisplayRadialBufferToLayer(layer, geojson, buffer);
+          }
           L.geoJSON(geojson, options).addTo(layer)
         } else {
           L.geoJSON(geojson).addTo(layer)
