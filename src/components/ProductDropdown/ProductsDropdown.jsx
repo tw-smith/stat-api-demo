@@ -20,6 +20,15 @@ const Dropdown = () => {
   )
   const _appConfig = useSelector((state) => state.mainSlice.appConfig)
 
+
+  useEffect(() => {
+
+    if (_productsData.length > 0) {
+      setSelectedProductId(_productsData[2].id);
+    }
+  }, [_productsData])
+
+
   useEffect(() => {
     const selectedProduct = _productsData?.find(
       (e) => e.id === selectedProductID

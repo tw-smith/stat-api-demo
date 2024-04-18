@@ -68,7 +68,7 @@ const LeftContent = () => {
             }
             onClick={setDetailsTab}
           >
-            Item Details
+            Opportunity list
           </button>
         </div>
         <div className="LeftContentSelectedTab">
