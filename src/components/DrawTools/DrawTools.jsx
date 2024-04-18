@@ -1,19 +1,23 @@
-import { Box, Switch } from '@mui/material'
-import { ThemeProvider, createTheme } from '@mui/material/styles'
-import { useSelector , useDispatch } from 'react-redux'
+import React from 'react'
+import { Box } from '@mui/material'
+import { createTheme, ThemeProvider } from '@mui/material/styles'
+import Button from '@mui/material/Button'
+import { useSelector, useDispatch } from 'react-redux'
 import 'react-tooltip/dist/react-tooltip.css'
 import {
   setautoCenterOnItemChanged,
   setisDrawingEnabled,
   setsearchGeojsonBoundary,
-  setshowSearchByGeom,
-  setshowUploadGeojsonModal
+  setshowSearchByGeom
 } from '../../redux/slices/mainSlice'
-import { clearLayer, enableMapPolyDrawing } from '../../utils/mapHelper'
+import {
+  clearLayer,
+  enableMapPolyDrawing,
+  enableMapPointDrawing
+} from '../../utils/mapHelper'
 
 const DrawTools = () => {
   const dispatch = useDispatch()
-  const _appConfig = useSelector((state) => state.mainSlice.appConfig)
 
   const _showSearchByGeom = useSelector(
     (state) => state.mainSlice.showSearchByGeom
@@ -36,12 +40,13 @@ const DrawTools = () => {
     enableMapPolyDrawing()
   }
 
-  function onUploadGeojsonButtonClicked() {
+  function onPointClicked() {
     if (_searchGeojsonBoundary) {
       return
     }
-    dispatch(setshowSearchByGeom(false))
-    dispatch(setshowUploadGeojsonModal(true))
+    dispatch(setshowSearchByGeom(!_showSearchByGeom))
+    dispatch(setisDrawingEnabled(true))
+    enableMapPointDrawing()
   }
 
   function onClearButtonClicked() {
@@ -58,73 +63,66 @@ const DrawTools = () => {
   }
 
   const theme = createTheme({
-    components: {
-      MuiSwitch: {
-        styleOverrides: {
-          switchBase: {
-            color: '#fff'
-          },
-          colorPrimary: {
-            '&.Mui-checked': {
-              color: '#fff'
-            }
-          },
-          track: {
-            backgroundColor: '#dedede',
-            '.Mui-checked.Mui-checked + &': {
-              backgroundColor: '#6cc24a'
-            }
-          }
-        }
+    palette: {
+      primary: {
+        main: '#DEDEDE'
+      },
+      secondary: {
+        main: '#4f5768'
       }
     }
   })
 
-  return (
-    <div>
-      {_appConfig.SEARCH_BY_GEOM_ENABLED && (
-        <div className="searchContainer searchBoundary">
-          <Box className="searchFilterContainer">
+  const _selectedProductData = useSelector(
+    (state) => state.mainSlice.selectedProductData
+  )
+  const allowsPoint =
+    _selectedProductData &&
+    _selectedProductData.conformsTo &&
+    _selectedProductData.conformsTo.some((str) => str.includes('Point'))
+  const allowsPolygon =
+    _selectedProductData &&
+    _selectedProductData.conformsTo &&
+    _selectedProductData.conformsTo.some((str) => str.includes('Polygon'))
 
-            <div className="searchByGeomOptionsButtons">
-              <button
-                className={
-                  !_searchGeojsonBoundary
-                    ? 'searchByGeomOptionsButton'
-                    : 'searchByGeomOptionsButton ' +
-                    'searchByGeomOptionsButtonDisabled'
-                }
-                onClick={onDrawBoundaryClicked}
-              >
-                Draw
-              </button>
-              <button
-                className={
-                  !_searchGeojsonBoundary
-                    ? 'searchByGeomOptionsButton'
-                    : 'searchByGeomOptionsButton ' +
-                    'searchByGeomOptionsButtonDisabled'
-                }
-                onClick={onUploadGeojsonButtonClicked}
-              >
-                Upload
-              </button>
-              <button
-                className={
-                  _searchGeojsonBoundary
-                    ? 'searchByGeomOptionsButton'
-                    : 'searchByGeomOptionsButton ' +
-                    'searchByGeomOptionsButtonDisabled'
-                }
-                onClick={onClearButtonClicked}
-              >
-                Clear
-              </button>
-            </div>
-          </Box>
-        </div>
-      )}
-    </div>
+  return (
+    <ThemeProvider theme={theme}>
+      <div className="searchContainer searchBoundary">
+        <Box className="searchFilterContainer">
+          <div
+            style={{
+              display: 'grid',
+              gridAutoFlow: 'column',
+              gridColumnGap: '10px'
+            }}
+          >
+            <Button
+              color="primary"
+              variant="contained"
+              onClick={onDrawBoundaryClicked}
+              disabled={!allowsPolygon}
+            >
+              Area
+            </Button>
+            <Button
+              color="primary"
+              variant="contained"
+              onClick={onPointClicked}
+              disabled={!allowsPoint}
+            >
+              Point
+            </Button>
+            <Button
+              color="primary"
+              variant="outline"
+              onClick={onClearButtonClicked}
+            >
+              Clear
+            </Button>
+          </div>
+        </Box>
+      </div>
+    </ThemeProvider>
   )
 }
 
