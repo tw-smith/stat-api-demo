@@ -76,7 +76,7 @@ const LeftContent = () => {
             <Search></Search>
           ) : (
             <div className="ItemDetails">
-              <PopupResults results={_clickResults}></PopupResults>
+              <PopupResults ></PopupResults>
             </div>
           )}
         </div>
