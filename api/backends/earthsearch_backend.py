@@ -37,7 +37,7 @@ def stac_item_to_opportunity(item: pystac.Item, product_id: str) -> Opportunity:
     point_vals = (item.geometry or {}).get("coordinates", [[[0, 0]]])[0][0]
 
     return Opportunity(
-        geometry=Point(coordinates=(point_vals[0], point_vals[1])),
+        geometry=Point(type='Point',coordinates=(point_vals[0], point_vals[1])),
         product_id=product_id,
         datetime=adjust_datetime(item.datetime)
         if item.datetime
