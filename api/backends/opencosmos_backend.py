@@ -1,3 +1,4 @@
+from typing import List
 from geojson_pydantic.features import Feature
 from api.models import (
     Geometry,
@@ -25,35 +26,57 @@ OC_MTO_URL = "https://test.app.open-cosmos.com/api/data/v1/tasking"
 OC_TASKING_REQUESTS_URL = "https://test.app.open-cosmos.com/api/data/v1"
 
 
+def extract_processing_level(collection: dict) -> List[str] | None:
+    """Extracts the processing level from the STAC collection
+
+    Args:
+        collection (dict): The STAC collection
+    Returns:
+        str: The processing level
+    """
+
+    level = collection.get("summaries", dict()).get("processing:level", None)
+    return level
+
+
 def oc_stac_collection_to_product(collection: dict) -> Product:
-    # Validate the STAC collection, set defaults etc
-    if "providers" not in collection:
-        collection["providers"] = [Provider(name="OpenCosmos")]
-    else:
-        collection["providers"] = [
-            Provider.parse_obj(provider) for provider in collection["providers"]
-        ]
-    if "keywords" not in collection:
-        collection["keywords"] = []
-    if "constraints" not in collection:
-        collection["constraints"] = {}
-    if "parameters" not in collection:
-        collection["parameters"] = {}
-    if collection["links"] is None:
-        collection["links"] = []
-    else:
-        collection["links"] = [Link.parse_obj(link) for link in collection["links"]]
+    """Converts a STAC collection to a STAPI Product
+    Args:
+        collection (dict): The STAC collection
+    Returns:
+        Product: The STAT Product
+    """
+
+    links = []
+    for link in collection.get("links", []) if collection.get("links") is not None else []:
+        if link["type"] != "":
+            links.append(Link.model_validate(link))
+
+    providers = []
+    for provider in collection.get("providers", []):
+        providers.append(Provider.model_validate(provider))
+
+    # Add OC as a provider if not already present
+    oc_provider = next((provider for provider in providers if provider.name == "Open Cosmos"), None)
+    if oc_provider is None:
+        providers.append(Provider(name="Open Cosmos"))
+
+    parameters = collection.get("parameters", dict())
+    if extract_processing_level(collection) is not None:
+        parameters["processing:level"] = extract_processing_level(collection)
+
+    constraints = collection.get("constraints", dict())
 
     return Product(
-        id=collection["id"],
-        title=collection["title"],
-        description=collection["description"],
-        constraints=collection["constraints"],
-        parameters=collection["parameters"],
-        license=collection["license"],
-        links=collection["links"],
-        keywords=collection["keywords"],
-        providers=collection["providers"],
+        id=collection.get("id", ""),
+        title=collection.get("title", ""),
+        description=collection.get("description", ""),
+        constraints=constraints,
+        parameters=parameters,
+        license=collection.get("license", ""),
+        links=links,
+        keywords=collection.get("keywords", []),
+        providers=providers,
     )
 
 
@@ -277,6 +300,8 @@ class OpenCosmosBackend:
 
         products = []
         for collection in stac_collection_response.json():
+            if "--qa" in collection["id"]:
+                continue
             products.append(oc_stac_collection_to_product(collection))
 
         return products
