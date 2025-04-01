@@ -277,6 +277,8 @@ class OpenCosmosBackend:
 
         products = []
         for collection in stac_collection_response.json():
+            if "--qa" in collection["id"]:
+                continue
             products.append(oc_stac_collection_to_product(collection))
 
         return products
