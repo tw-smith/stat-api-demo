@@ -6,6 +6,8 @@ from typing import Any
 
 from fastapi import FastAPI
 
+from api.backends.opencosmos_products.menut import menut
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from stapi_fastapi.models.conformance import  CORE, OPPORTUNITIES
@@ -15,7 +17,7 @@ from api.tests_fastapi.backends import (
     mock_get_order_statuses,
     mock_get_orders,
 )
-from tests_fastapi.shared import (
+from api.tests_fastapi.shared import (
     InMemoryOpportunityDB,
     InMemoryOrderDB,
     product_test_satellite_provider_sync_opportunity,
@@ -42,7 +44,8 @@ root_router = RootRouter(
     get_opportunity_search_record=None,
     conformances=[CORE, OPPORTUNITIES]
 )
-root_router.add_product(product_test_spotlight_sync_async_opportunity)
-root_router.add_product(product_test_satellite_provider_sync_opportunity)
+# root_router.add_product(product_test_spotlight_sync_async_opportunity)
+# root_router.add_product(product_test_satellite_provider_sync_opportunity)
+root_router.add_product(menut)
 app: FastAPI = FastAPI(lifespan=lifespan)
 app.include_router(root_router, prefix="")
