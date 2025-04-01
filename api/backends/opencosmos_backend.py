@@ -39,6 +39,20 @@ def extract_processing_level(collection: dict) -> List[str] | None:
     return level
 
 
+def extract_platform_name(collection: dict) -> str | None:
+    """Extracts the platform name from the STAC collection
+
+    Args:
+        collection (dict): The STAC collection
+    Returns:
+        str: The platform name
+    """
+    platform = collection.get("summaries", dict()).get("platform", None)
+    if platform is not None:
+        return platform[0]
+    return None
+
+
 def oc_stac_collection_to_product(collection: dict) -> Product:
     """Converts a STAC collection to a STAPI Product
     Args:
@@ -66,6 +80,9 @@ def oc_stac_collection_to_product(collection: dict) -> Product:
         parameters["processing:level"] = extract_processing_level(collection)
 
     constraints = collection.get("constraints", dict())
+    platform_constraints = next((platform for platform in get_available_oc_platforms() if platform.name.lower() == extract_platform_name(collection)), None)
+    if platform_constraints is not None:
+        constraints.update(platform_constraints.constraints)
 
     return Product(
         id=collection.get("id", ""),
