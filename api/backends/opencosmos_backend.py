@@ -1,5 +1,6 @@
 from typing import List
 from geojson_pydantic.features import Feature
+from api.backends.opencosmos_entities.platform_data import get_available_oc_platforms
 from api.backends.opencosmos_entities.utils import OffNadirRange
 from api.models import (
     Geometry,
@@ -24,7 +25,6 @@ from stapi_fastapi.models.opportunity import OpportunityPayload, Opportunity
 OC_STAC_API_URL = "https://test.app.open-cosmos.com/api/data/v0/stac"
 OC_MTO_URL = "https://test.app.open-cosmos.com/api/data/v1/tasking"
 OC_TASKING_REQUESTS_URL = "https://test.app.open-cosmos.com/api/data/v1"
-
 
 def extract_processing_level(collection: dict) -> List[str] | None:
     """Extracts the processing level from the STAC collection
@@ -317,6 +317,15 @@ class OpenCosmosBackend:
         products = []
         for collection in stac_collection_response.json():
             if "--qa" in collection["id"]:
+                continue
+            platforms = collection.get("summaries", dict()).get("platform", None)
+            [platform.lower() for platform in platforms] if platforms is not None else []
+            if platforms is None:
+                continue
+
+            allowed_platforms = []
+            [allowed_platforms.append(platform.name.lower()) for platform in get_available_oc_platforms()]
+            if not set(platforms).issubset(allowed_platforms):
                 continue
             products.append(oc_stac_collection_to_product(collection))
 
