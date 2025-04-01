@@ -1,8 +1,8 @@
 from typing import List
 from geojson_pydantic.features import Feature
+from api.backends.opencosmos_entities.utils import OffNadirRange
 from api.models import (
     Geometry,
-    Opportunity,
     Order,
     Product,
     Provider,
@@ -19,7 +19,7 @@ from api.backends.opencosmos_entities.transport import (
     Activity,
 )
 from api.backends.opencosmos_entities.utils import convert_datetime_string_to_datetime, datetime_parser
-
+from stapi_fastapi.models.opportunity import OpportunityPayload, Opportunity
 
 OC_STAC_API_URL = "https://test.app.open-cosmos.com/api/data/v0/stac"
 OC_MTO_URL = "https://test.app.open-cosmos.com/api/data/v1/tasking"
@@ -81,7 +81,7 @@ def oc_stac_collection_to_product(collection: dict) -> Product:
 
 
 def opportunity_to_mto_search_request(
-    opportunity: Opportunity,
+    opportunity: OpportunityPayload,
 ) -> ManualTaskingOrchestrationSearchRequest:
     """Converts a STAT Opportunity object into an MTO opportunity search request object
 
@@ -105,9 +105,20 @@ def opportunity_to_mto_search_request(
             }
         ],
         # constraints=opportunity.constraints, #TODO implement constraints
-        constraints=list(),
-        start=opportunity.start_date,
-        stop=opportunity.end_date,
+        constraints=[
+        {
+            "min": -15,
+            "max": 15,
+            "type": "ROLL"
+        },
+        {
+            "min": 0,
+            "max": 90,
+            "type": "SZA"
+        }
+    ],
+        start=opportunity.datetime[0],
+        stop=opportunity.datetime[1],
     )
 
 
@@ -126,16 +137,19 @@ def mto_search_response_to_opportunity_collection(
 
     opportunities = []
     for opportunity in response["data"]:
-        start = str(opportunity["start"].split(".")[0])
-        stop = str(opportunity["stop"].split(".")[0])
+        start = str(opportunity["start"])
+        stop = str(opportunity["stop"])
         opportunities.append(
             Opportunity(
                 id="id",
+                type="Feature",
                 geometry=opportunity["field_of_regard"]["footprint"]["geojson"]["geometry"],
                 # TODO implement constraints
-                datetime=f"{start}/{stop}",
-                product_id="hard coded opp product id",
                 constraints=None,
+                properties={"datetime": f"{start}/{stop}", 
+                            "product_id": "hard coded opp product id",
+                            "off_nadir": OffNadirRange(minimum=20, maximum=22)},
+                links=[],
             )
         )
     return opportunities
@@ -251,12 +265,12 @@ def build_tasking_request_request(
 
 class OpenCosmosBackend:
     async def find_opportunities(
-        self, search: Opportunity, token: str
+        self, search: OpportunityPayload, token: str
     ) -> list[Opportunity]:
         """Finds opportunities from the MTO service and converts them to STAT Opportunities
 
         Args:
-            search (Opportunity): The STAT Opportunity object
+            search (OpportunityPayload): The STAT Opportunity object
             token (str): The user's token
 
         Returns:
@@ -264,15 +278,17 @@ class OpenCosmosBackend:
         """
 
         headers = {
-            "Authorization": f"Bearer {token}",
+            "Authorization": f"{token}",
             "Content-Type": "application/json",
         }
 
+        body = json.dumps(
+                opportunity_to_mto_search_request(search).dict(), default=str, indent=4
+            )
+
         mto_search_response = requests.post(
             f"{OC_MTO_URL}/search",
-            data=json.dumps(
-                opportunity_to_mto_search_request(search).dict(), default=str, indent=4
-            ),
+            data=body,
             headers=headers,
             timeout=10,
         )

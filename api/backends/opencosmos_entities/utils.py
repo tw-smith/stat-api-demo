@@ -1,5 +1,8 @@
 from datetime import datetime
 import re
+from typing import Self
+
+from pydantic import BaseModel, Field, model_validator
 
 
 def convert_datetime_to_iso8601(date: datetime) -> str:
@@ -23,3 +26,13 @@ def datetime_parser(dict_: dict) -> dict:
         if isinstance(value, str) and re.search("start|stop", key):
             dict_[key] = convert_datetime_string_to_datetime(value)
     return dict_
+
+class OffNadirRange(BaseModel):
+    minimum: float = Field(ge=0, le=45)
+    maximum: float = Field(ge=0, le=45)
+
+    @model_validator(mode="after")
+    def validate_range(self) -> Self:
+        if self.minimum > self.maximum:
+            raise ValueError("range minimum cannot be greater than maximum")
+        return self

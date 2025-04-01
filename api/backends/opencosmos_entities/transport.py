@@ -1,5 +1,4 @@
 from datetime import datetime
-from token import OP
 from typing import Any, Optional
 from geojson_pydantic.features import Feature
 from pydantic import BaseModel
