@@ -12,7 +12,7 @@ from geojson_pydantic.geometries import (
     Polygon,
 )
 from pydantic import BaseModel, Field, constr
-from pydantic.datetime_parse import parse_datetime
+from api.utils.datetime_parse import parse_datetime
 from stac_pydantic.collection import Range
 from stac_pydantic.links import Link
 
@@ -54,9 +54,8 @@ class Product(BaseModel):
     https://github.com/Element84/sat-tasking-sprint/tree/main/spec/product
     """
 
-    type: Literal["Product"] = Field(const=True, default="Product")
+    type: Literal["Product"] = Field(default="Product")
     stat_version: str = Field(
-        const=True,
         default="0.0.1",
         description="The STAT version the Product implements",
     )
