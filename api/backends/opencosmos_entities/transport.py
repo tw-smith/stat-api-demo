@@ -82,6 +82,21 @@ class FieldOfRegard(BaseModel):
         return self.json(by_alias=True, exclude_unset=True, **kwargs)
 
 
+class Forecast(BaseModel):
+    cloud_cover_pc: int
+    
+class Location(BaseModel):
+    type: str
+    coordinates: list[float]|list[list[float]]
+
+class MinMaxCloudCover(BaseModel):
+    location: Location
+    forecast: Forecast    
+
+class CloudCoverage(BaseModel):
+    max_cloud_cover: MinMaxCloudCover
+    min_cloud_cover: MinMaxCloudCover
+
 class ManualTaskingOrchestrationSearchResponse(BaseModel):
     """Represents the response body for a MTO opportunity search request"""
     region_id: str
@@ -91,8 +106,8 @@ class ManualTaskingOrchestrationSearchResponse(BaseModel):
     stop: datetime
     roll_steering: list[float]
     suggested_roll: float
-    cloud_coverage: Optional[float]
-    sun_glint: Optional[float]
+    cloud_coverage: Optional[CloudCoverage]
+    sun_glint: Optional[bool]
     sza: float
     oza: Optional[float]
 

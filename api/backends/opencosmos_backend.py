@@ -21,6 +21,7 @@ from api.backends.opencosmos_entities.transport import (
 from fastapi import Request
 from api.backends.opencosmos_entities.utils import convert_datetime_string_to_datetime, datetime_parser
 from stapi_fastapi.models.opportunity import OpportunityPayload, Opportunity
+from stapi_fastapi.models.order import OrderPayload
 from stapi_fastapi.models.product import (
     Product,
     Provider,
@@ -256,7 +257,7 @@ def get_swath(oc_opp: dict, aoi: Geometry, token: str) -> dict:
     return mto_swath_response.json()
 
 
-def get_oc_opportunity(opportunity: Opportunity, token: str) -> ManualTaskingOrchestrationSearchResponse:
+def get_oc_opportunity(opportunity: OpportunityPayload|OrderPayload, token: str) -> ManualTaskingOrchestrationSearchResponse:
     """Gets an OpenCosmos opportunity from the MTO service opportunity search endpoint
 
     Args:
@@ -269,7 +270,7 @@ def get_oc_opportunity(opportunity: Opportunity, token: str) -> ManualTaskingOrc
 
     request_body = opportunity_to_mto_search_request(opportunity)
     headers = {
-        "Authorization": f"Bearer {token}",
+        "Authorization": f"{token}",
         "Content-Type": "application/json",
     }
     response = requests.post(
@@ -279,33 +280,33 @@ def get_oc_opportunity(opportunity: Opportunity, token: str) -> ManualTaskingOrc
         timeout=10,
     )
 
-    return ManualTaskingOrchestrationSearchResponse.parse_obj(response.json(object_hook=datetime_parser)['data'][0])
+    return ManualTaskingOrchestrationSearchResponse.parse_obj(response.json()['data'][0])
 
 
 def build_tasking_request_request(
-    opportunity: Opportunity, token: str
+    order: OrderPayload, token: str
 ) -> CreateTaskingRequestRequest:
-    """Builds an OC tasking request from a STAT Opportunity object
+    """Builds an OC tasking request from a STAT order object
 
     Args:
-        opportunity (Opportunity): The STAT Opportunity object
+        order (OrderPayload): The STAT order object
         token (str): The user's token
 
     Returns:
         CreateTaskingRequestRequest: The OC tasking request body"""
 
-    oc_opp = get_oc_opportunity(opportunity, token)
+    oc_opp = get_oc_opportunity(order, token)
 
     activity_parameters = ActivityParameters(
         platform={
-            "roll_angle": 3.2,  # TODO get from constraints
+            "roll_angle": oc_opp.suggested_roll,  # TODO get from constraints
         },
-        imager={"name": "MultiScape100 CIS"},
+        imager={"name": oc_opp.imager_id},
     )
 
     activity = Activity(
         type="IMAGE_ACQUISITION",
-        mission_id="55",
+        mission_id=oc_opp.mission_id,
         start_date=oc_opp.start,
         end_date=oc_opp.stop,
         parameters=activity_parameters,
@@ -315,12 +316,12 @@ def build_tasking_request_request(
         type="MANUAL",
         region_name="region_name",
         region=Feature(
-            geometry=opportunity.geometry, type="Feature", properties={"test": "test"}
+            geometry=order.geometry, type="Feature", properties={"test": "test"}
         ),
         parameters=None,
         activities=[activity],
         constraints=list(),
-        instruments=[{"mission_id": "55", "sensor_id": "MultiScape100 CIS"}],
+        instruments=[{"mission_id": oc_opp.mission_id, "sensor_id": oc_opp.imager_id}],
     )
 
 
@@ -443,7 +444,7 @@ async def find_products(self, token: str) -> list[Product]:
     return products
 
 
-async def place_order(self, order: Opportunity, token: str) -> Order:
+async def place_order(self, product: Product, order: OrderPayload, token: str) -> Order:
     """Takes a STAT opportunity and converts it to an OC tasking request and submits
     it to the Tasking Requests service.
 
@@ -456,11 +457,9 @@ async def place_order(self, order: Opportunity, token: str) -> Order:
     """
 
     headers = {
-        "Authorization": f"Bearer {token}",
+        "Authorization": f"{token}",
         "Content-Type": "application/json",
     }
-
-    # swath = get_swath(order, token)
 
     tasking_request = build_tasking_request_request(order, token)
 

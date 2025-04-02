@@ -10,6 +10,14 @@ from stapi_fastapi.models.product import (
     Provider,
     ProviderRole,
 )
+from stapi_fastapi.models.order import (
+    Order,
+    OrderPayload,
+    OrderStatus,
+    OrderStatusCode,
+)
+
+
 from stapi_fastapi.models.opportunity import (
     Opportunity,
     OpportunityCollection,
@@ -18,6 +26,8 @@ from stapi_fastapi.models.opportunity import (
     OpportunitySearchStatus,
     OpportunitySearchStatusCode,
 )
+
+
 from returns.maybe import Maybe, Nothing, Some
 from returns.result import Failure, ResultE, Success
 from api.backends.opencosmos_entities.utils import OffNadirRange
@@ -31,8 +41,7 @@ provider = provider = Provider(
 )
 
 class MyProductConstraints(BaseModel):
-    off_nadir: float
-
+    off_nadir: float = Field(ge=0, le=45)
 
 class MyOpportunityProperties(OpportunityProperties):
     off_nadir: OffNadirRange
@@ -57,6 +66,24 @@ class MyOrderParameters(OrderParameters):
     #     except Exception as e:
     #         return Failure(e)
         
+async def create_order(
+    product_router: ProductRouter,
+    order_payload: OrderPayload,
+    request: Request,
+) -> ResultE[Order]:
+    """
+    Create an order with the given payload.
+    """
+    product = product_router.product
+    
+    back = OpenCosmosBackend()
+    try:
+        order = await back.place_order(
+            product, order_payload, request.headers.get("Authorization")
+        )
+        return Success(order)
+    except Exception as e:
+        return Failure(e)
 
     # return search_opportunities
 
