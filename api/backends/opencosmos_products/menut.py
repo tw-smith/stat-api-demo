@@ -66,25 +66,6 @@ class MyOrderParameters(OrderParameters):
     #     except Exception as e:
     #         return Failure(e)
         
-async def create_order(
-    product_router: ProductRouter,
-    order_payload: OrderPayload,
-    request: Request,
-) -> ResultE[Order]:
-    """
-    Create an order with the given payload.
-    """
-    product = product_router.product
-    
-    back = OpenCosmosBackend()
-    try:
-        order = await back.place_order(
-            product, order_payload, request.headers.get("Authorization")
-        )
-        return Success(order)
-    except Exception as e:
-        return Failure(e)
-
     # return search_opportunities
 
 # menut = Product(
