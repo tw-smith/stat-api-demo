@@ -10,6 +10,14 @@ from stapi_fastapi.models.product import (
     Provider,
     ProviderRole,
 )
+from stapi_fastapi.models.order import (
+    Order,
+    OrderPayload,
+    OrderStatus,
+    OrderStatusCode,
+)
+
+
 from stapi_fastapi.models.opportunity import (
     Opportunity,
     OpportunityCollection,
@@ -18,6 +26,8 @@ from stapi_fastapi.models.opportunity import (
     OpportunitySearchStatus,
     OpportunitySearchStatusCode,
 )
+
+
 from returns.maybe import Maybe, Nothing, Some
 from returns.result import Failure, ResultE, Success
 from api.backends.opencosmos_backend import OpenCosmosBackend
@@ -32,8 +42,7 @@ provider = provider = Provider(
 )
 
 class MyProductConstraints(BaseModel):
-    off_nadir: float
-
+    off_nadir: float = Field(ge=0, le=45)
 
 class MyOpportunityProperties(OpportunityProperties):
     off_nadir: OffNadirRange
@@ -58,8 +67,26 @@ def search_opportunities_wrapper(sat_id: str):
         except Exception as e:
             return Failure(e)
         
-
     return search_opportunities
+
+async def create_order(
+    product_router: ProductRouter,
+    order_payload: OrderPayload,
+    request: Request,
+) -> ResultE[Order]:
+    """
+    Create an order with the given payload.
+    """
+    product = product_router.product
+    
+    back = OpenCosmosBackend()
+    try:
+        order = await back.place_order(
+            product, order_payload, request.headers.get("Authorization")
+        )
+        return Success(order)
+    except Exception as e:
+        return Failure(e)
 
 menut = Product(
     id="test-menut",
@@ -69,7 +96,7 @@ menut = Product(
     keywords=["menut", "satellite"],
     providers=[provider],
     links=[],
-    create_order=mock_create_order,
+    create_order=create_order,
     search_opportunities=search_opportunities_wrapper("55"),
     search_opportunities_async=None,
     get_opportunity_collection=None,
