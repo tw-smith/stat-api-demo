@@ -1,9 +1,13 @@
+from typing import Optional
 from geojson_pydantic.features import Feature
+from pydantic import BaseModel, Field
 from api.backends.opencosmos_entities.platform_data import get_available_oc_platforms
-from api.backends.opencosmos_entities.utils import OffNadirRange
+from api.backends.opencosmos_entities.utils import Range
 from api.models import (
     Link
 )
+from stapi_fastapi.models.shared import Link as StapiLink
+
 import requests
 import json
 from api.backends.opencosmos_entities.transport import (
@@ -23,16 +27,22 @@ from stapi_fastapi.models.product import (
     Provider,
 )
 
-from stapi_fastapi import ProductRouter
+from stapi_fastapi import OpportunityProperties, ProductRouter
 from returns.result import ResultE, Success, Failure
 from returns.maybe import Maybe, Nothing
 
 from api.tests_fastapi.shared import MyOrderParameters
-from api.backends.opencosmos_products.menut import MyOpportunityProperties
 
 OC_STAC_API_URL = "https://test.app.open-cosmos.com/api/data/v0/stac"
 OC_MTO_URL = "https://test.app.open-cosmos.com/api/data/v1/tasking"
 OC_TASKING_REQUESTS_URL = "https://test.app.open-cosmos.com/api/data/v1"
+
+
+class MyOpportunityProperties(OpportunityProperties):
+    roll_angle: Range
+    observational_zenith_angle: Optional[float]
+    sun_zenith_angle: Optional[float]
+    cloud_coverage: Optional[Range]
 
 def extract_processing_level(product: Product) -> str | None:
     """Extracts the processing level from the STAC collection
@@ -114,13 +124,21 @@ def oc_stac_collection_to_product(collection: dict) -> Product:
     constraints = collection.get("constraints", dict())
     if platform_data is not None:
         for constraint in platform_data.constraints:
-            constraints.update(constraint)
+            if constraint == "roll_angle":
+                values = platform_data.constraints[constraint]
+                constraints.update({constraint: values})
+                
+    class Constraints(BaseModel):
+        roll_angle: float = Field(ge=constraints.get("roll_angle", [-45, 45])[0], le=constraints.get("roll_angle", [-45, 45])[1])
+        observational_zenith_angle: float = Field(ge=0, le=60)
+        sun_zenith_angle: float = Field(ge=0, le=180)
+        cloud_coverage: float = Field(ge=0, le=100)
 
     return Product(
         id=collection.get("id", ""),
         title=collection.get("title", ""),
         description=collection.get("description", ""),
-        constraints=constraints,
+        constraints=Constraints,
         license=collection.get("license", ""),
         links=[],
         keywords=collection.get("keywords", []),
@@ -204,8 +222,12 @@ def mto_search_response_to_opportunity_collection(
                 constraints=None,
                 properties={"datetime": f"{start}/{stop}", 
                             "product_id": "hard coded opp product id",
-                            "off_nadir": OffNadirRange(minimum=20, maximum=22)},
-                links=[],
+                            "roll_angle": Range(minimum=opportunity["roll_steering"][0], maximum=opportunity["roll_steering"][1]),
+                            "sun_zenith_angle": opportunity["sza"],
+                            "observational_zenith_angle": None,
+                            "cloud_coverage": Range(minimum=0, maximum=100),
+                },
+                links=[]
             )
         )
     return opportunities
@@ -372,9 +394,9 @@ async def create_order(
 
 async def search_opportunities(product_router: ProductRouter,
                                search: OpportunityPayload,
-                                next: str | None,
-                                limit: int,
-                                request: Request) -> ResultE[tuple[list[Opportunity], Maybe[str]]]:
+                               next: str | None,
+                               limit: int,
+                               request: Request) -> ResultE[tuple[list[Opportunity], Maybe[str]]]:
     """Searches for opportunities using the Open Cosmos backend
     Args:
         product_router (ProductRouter): The product router
@@ -387,14 +409,14 @@ async def search_opportunities(product_router: ProductRouter,
     """
 
     try:
-        opportunities = await find_opportunities(search, product_router.product, request.headers.get("Authorization"))
+        opportunities = await find_opportunities(search, product_router.product, request.headers.get("Authorization"), request.base_url)
         return Success((opportunities, Nothing))
     except Exception as e:
         return Failure(e)
 
 
 async def find_opportunities(
-    search: OpportunityPayload, product: Product, token: str
+    search: OpportunityPayload, product: Product, token: str, base_url: str
 ) -> list[Opportunity]:
     """Finds opportunities from the MTO service and converts them to STAT Opportunities
 
@@ -425,6 +447,23 @@ async def find_opportunities(
     opportunities = mto_search_response_to_opportunity_collection(
         mto_search_response.json()
     )
+    
+    # Add links to opportunities
+    for opportunity in opportunities:
+        opp_json = opportunity.model_dump()
+        
+        opportunity.links = [
+            StapiLink(
+                rel="create-order",
+                href=f"{base_url}products/{product.id}/orders",
+                method="POST",
+                type="application/json",
+                body={"datetime": opp_json["properties"]["datetime"],
+                      "geometry": opp_json["geometry"],
+                      "filter": {},
+                      "order_parameters": {}},
+            )
+        ]
     return opportunities
 
 
