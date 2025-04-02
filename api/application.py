@@ -6,7 +6,8 @@ from typing import Any
 
 from fastapi import FastAPI
 
-from api.backends.opencosmos_products.menut import menut
+
+from api.backends.opencosmos_backend import generate_product_list
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
@@ -46,6 +47,15 @@ root_router = RootRouter(
 )
 # root_router.add_product(product_test_spotlight_sync_async_opportunity)
 # root_router.add_product(product_test_satellite_provider_sync_opportunity)
-root_router.add_product(menut)
+
+tk = os.environ.get("TOKEN")
+if tk is None:
+    raise ValueError("TOKEN environment variable not set")
+available_products = generate_product_list(tk)
+
+for product in available_products:
+    root_router.add_product(product)
+
+#root_router.add_product(menut)
 app: FastAPI = FastAPI(lifespan=lifespan)
 app.include_router(root_router, prefix="")

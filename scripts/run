@@ -10,7 +10,7 @@ Start application.
 }
 
 function run_backend() {
-    PYTHONPATH="$(dirname $(dirname $0))/api/" uvicorn main:app --reload
+    PYTHONPATH="$(dirname $(dirname $0))/api/" uvicorn application:app --reload
 }
 
 function run_frontend() {
