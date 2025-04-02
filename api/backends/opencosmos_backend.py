@@ -1,13 +1,13 @@
-from multiprocessing import process
-from typing import List
+from typing import Optional
 from geojson_pydantic.features import Feature
+from pydantic import BaseModel, Field
 from api.backends.opencosmos_entities.platform_data import get_available_oc_platforms
-from api.backends.opencosmos_entities.utils import OffNadirRange
+from api.backends.opencosmos_entities.utils import Range
 from api.models import (
-    Geometry,
-    Order,
-    Link,
+    Link
 )
+from stapi_fastapi.models.shared import Link as StapiLink
+
 import requests
 import json
 from api.backends.opencosmos_entities.transport import (
@@ -19,26 +19,30 @@ from api.backends.opencosmos_entities.transport import (
     Activity,
 )
 from fastapi import Request
-from api.backends.opencosmos_entities.utils import convert_datetime_string_to_datetime, datetime_parser
+from api.backends.opencosmos_entities.utils import convert_datetime_string_to_datetime
 from stapi_fastapi.models.opportunity import OpportunityPayload, Opportunity
-from stapi_fastapi.models.order import OrderPayload
+from stapi_fastapi.models.order import OrderPayload, Order, OrderStatus, OrderStatusCode
 from stapi_fastapi.models.product import (
     Product,
     Provider,
-    ProviderRole,
 )
 
-from stapi_fastapi import ProductRouter
+from stapi_fastapi import OpportunityProperties, ProductRouter
 from returns.result import ResultE, Success, Failure
-from returns.maybe import Maybe, Nothing, Some
+from returns.maybe import Maybe, Nothing
 
-from api.tests_fastapi.backends import mock_create_order
 from api.tests_fastapi.shared import MyOrderParameters
-from api.backends.opencosmos_products.menut import MyOpportunityProperties
 
 OC_STAC_API_URL = "https://test.app.open-cosmos.com/api/data/v0/stac"
 OC_MTO_URL = "https://test.app.open-cosmos.com/api/data/v1/tasking"
 OC_TASKING_REQUESTS_URL = "https://test.app.open-cosmos.com/api/data/v1"
+
+
+class MyOpportunityProperties(OpportunityProperties):
+    roll_angle: Range
+    observational_zenith_angle: Optional[float]
+    sun_zenith_angle: Optional[float]
+    cloud_coverage: Optional[Range]
 
 def extract_processing_level(product: Product) -> str | None:
     """Extracts the processing level from the STAC collection
@@ -120,18 +124,26 @@ def oc_stac_collection_to_product(collection: dict) -> Product:
     constraints = collection.get("constraints", dict())
     if platform_data is not None:
         for constraint in platform_data.constraints:
-            constraints.update(constraint)
+            if constraint == "roll_angle":
+                values = platform_data.constraints[constraint]
+                constraints.update({constraint: values})
+                
+    class Constraints(BaseModel):
+        roll_angle: float = Field(ge=constraints.get("roll_angle", [-45, 45])[0], le=constraints.get("roll_angle", [-45, 45])[1])
+        observational_zenith_angle: float = Field(ge=0, le=60)
+        sun_zenith_angle: float = Field(ge=0, le=180)
+        cloud_coverage: float = Field(ge=0, le=100)
 
     return Product(
         id=collection.get("id", ""),
         title=collection.get("title", ""),
         description=collection.get("description", ""),
-        constraints=constraints,
+        constraints=Constraints,
         license=collection.get("license", ""),
         links=[],
         keywords=collection.get("keywords", []),
         providers=providers,
-        create_order=mock_create_order,
+        create_order=create_order,
         search_opportunities=search_opportunities,
         search_opportunities_async=None,
         get_opportunity_collection=None,
@@ -210,54 +222,58 @@ def mto_search_response_to_opportunity_collection(
                 constraints=None,
                 properties={"datetime": f"{start}/{stop}", 
                             "product_id": "hard coded opp product id",
-                            "off_nadir": OffNadirRange(minimum=20, maximum=22)},
-                links=[],
+                            "roll_angle": Range(minimum=opportunity["roll_steering"][0], maximum=opportunity["roll_steering"][1]),
+                            "sun_zenith_angle": opportunity["sza"],
+                            "observational_zenith_angle": None,
+                            "cloud_coverage": Range(minimum=0, maximum=100),
+                },
+                links=[]
             )
         )
     return opportunities
 
 
-def get_swath(oc_opp: dict, aoi: Geometry, token: str) -> dict:
-    """Builds the MTO swath request and sends it to the MTO service swath endpoint
+# def get_swath(oc_opp: dict, aoi: Geometry, token: str) -> dict:
+#     """Builds the MTO swath request and sends it to the MTO service swath endpoint
 
-    Args:
-        oc_opp (dict): The OpenCosmos opportunity
-        aoi (Geometry): The area of interest
-        token (str): The user's token
+#     Args:
+#         oc_opp (dict): The OpenCosmos opportunity
+#         aoi (Geometry): The area of interest
+#         token (str): The user's token
 
-    Returns:
-        dict: The MTO swath response
-    """
+#     Returns:
+#         dict: The MTO swath response
+#     """
 
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
-    }
+#     headers = {
+#         "Authorization": f"Bearer {token}",
+#         "Content-Type": "application/json",
+#     }
 
-    payload = ManualTaskingOrchestrationSwathRequest(
-        instrument={"mission_id": "55", "sensor_id": "MultiScape100 CIS"},
-        area_of_interest={
-            "name": "aoi_name",
-            "geojson": Feature(
-                geometry=aoi, type="Feature", properties={"test": "test"}
-            ),
-        },
-        roll_angle=3.2,  # TODO get from constraints
-        start=convert_datetime_string_to_datetime(oc_opp["data"][0]["start"]),
-        stop=convert_datetime_string_to_datetime(oc_opp["data"][0]["stop"]),
-    )
+#     payload = ManualTaskingOrchestrationSwathRequest(
+#         instrument={"mission_id": "55", "sensor_id": "MultiScape100 CIS"},
+#         area_of_interest={
+#             "name": "aoi_name",
+#             "geojson": Feature(
+#                 geometry=aoi, type="Feature", properties={"test": "test"}
+#             ),
+#         },
+#         roll_angle=3.2,  # TODO get from constraints
+#         start=convert_datetime_string_to_datetime(oc_opp["data"][0]["start"]),
+#         stop=convert_datetime_string_to_datetime(oc_opp["data"][0]["stop"]),
+#     )
 
-    mto_swath_response = requests.post(
-        f"{OC_MTO_URL}/swath",
-        data=json.dumps(payload.dict(), default=str, indent=4),
-        headers=headers,
-        timeout=10,
-    )
+#     mto_swath_response = requests.post(
+#         f"{OC_MTO_URL}/swath",
+#         data=json.dumps(payload.dict(), default=str, indent=4),
+#         headers=headers,
+#         timeout=10,
+#     )
 
-    return mto_swath_response.json()
+#     return mto_swath_response.json()
 
 
-def get_oc_opportunity(opportunity: OpportunityPayload|OrderPayload, token: str) -> ManualTaskingOrchestrationSearchResponse:
+def get_oc_opportunity(opportunity: OpportunityPayload|OrderPayload, product: Product, token: str) -> ManualTaskingOrchestrationSearchResponse:
     """Gets an OpenCosmos opportunity from the MTO service opportunity search endpoint
 
     Args:
@@ -268,7 +284,7 @@ def get_oc_opportunity(opportunity: OpportunityPayload|OrderPayload, token: str)
         dict: The OpenCosmos opportunity search response
     """
 
-    request_body = opportunity_to_mto_search_request(opportunity)
+    request_body = opportunity_to_mto_search_request(opportunity, product)
     headers = {
         "Authorization": f"{token}",
         "Content-Type": "application/json",
@@ -284,7 +300,7 @@ def get_oc_opportunity(opportunity: OpportunityPayload|OrderPayload, token: str)
 
 
 def build_tasking_request_request(
-    order: OrderPayload, token: str
+    order: OrderPayload, product: Product, token: str
 ) -> CreateTaskingRequestRequest:
     """Builds an OC tasking request from a STAT order object
 
@@ -295,7 +311,7 @@ def build_tasking_request_request(
     Returns:
         CreateTaskingRequestRequest: The OC tasking request body"""
 
-    oc_opp = get_oc_opportunity(order, token)
+    oc_opp = get_oc_opportunity(order, product, token)
 
     activity_parameters = ActivityParameters(
         platform={
@@ -352,11 +368,35 @@ def generate_product_list(token: str) -> list[Product]:
     return products
 
 
+async def create_order(
+    product_router: ProductRouter,
+    order_payload: OrderPayload,
+    request: Request,
+) -> ResultE[Order]:
+    """
+    Create an order with the given payload using the Open Cosmos backend.
+    
+    Args:
+        product_router (ProductRouter): The product router
+        order_payload (OrderPayload): The order payload
+        request (Request): The request object
+    Returns:
+        ResultE[Order]: A result object containing the order
+    """
+    product = product_router.product
+    
+    try:
+        order = await place_order(product, order_payload, request.headers.get("Authorization"))
+        return Success(order)
+    except Exception as e:
+        return Failure(e)
+
+
 async def search_opportunities(product_router: ProductRouter,
                                search: OpportunityPayload,
-                                next: str | None,
-                                limit: int,
-                                request: Request) -> ResultE[tuple[list[Opportunity], Maybe[str]]]:
+                               next: str | None,
+                               limit: int,
+                               request: Request) -> ResultE[tuple[list[Opportunity], Maybe[str]]]:
     """Searches for opportunities using the Open Cosmos backend
     Args:
         product_router (ProductRouter): The product router
@@ -369,14 +409,14 @@ async def search_opportunities(product_router: ProductRouter,
     """
 
     try:
-        opportunities = await find_opportunities(search, product_router.product, request.headers.get("Authorization"))
+        opportunities = await find_opportunities(search, product_router.product, request.headers.get("Authorization"), request.base_url)
         return Success((opportunities, Nothing))
     except Exception as e:
         return Failure(e)
 
 
 async def find_opportunities(
-    search: OpportunityPayload, product: Product, token: str
+    search: OpportunityPayload, product: Product, token: str, base_url: str
 ) -> list[Opportunity]:
     """Finds opportunities from the MTO service and converts them to STAT Opportunities
 
@@ -407,6 +447,23 @@ async def find_opportunities(
     opportunities = mto_search_response_to_opportunity_collection(
         mto_search_response.json()
     )
+    
+    # Add links to opportunities
+    for opportunity in opportunities:
+        opp_json = opportunity.model_dump()
+        
+        opportunity.links = [
+            StapiLink(
+                rel="create-order",
+                href=f"{base_url}products/{product.id}/orders",
+                method="POST",
+                type="application/json",
+                body={"datetime": opp_json["properties"]["datetime"],
+                      "geometry": opp_json["geometry"],
+                      "filter": {},
+                      "order_parameters": {}},
+            )
+        ]
     return opportunities
 
 
@@ -444,7 +501,7 @@ async def find_products(self, token: str) -> list[Product]:
     return products
 
 
-async def place_order(self, product: Product, order: OrderPayload, token: str) -> Order:
+async def place_order(product: Product, order: OrderPayload, token: str) -> Order:
     """Takes a STAT opportunity and converts it to an OC tasking request and submits
     it to the Tasking Requests service.
 
@@ -461,7 +518,7 @@ async def place_order(self, product: Product, order: OrderPayload, token: str) -
         "Content-Type": "application/json",
     }
 
-    tasking_request = build_tasking_request_request(order, token)
+    tasking_request = build_tasking_request_request(order, product, token)
 
     project_id = "d4ecc3b7-d72c-4c5f-80c9-0f60d9755e6d"
 
@@ -473,4 +530,25 @@ async def place_order(self, product: Product, order: OrderPayload, token: str) -
     )
 
     print(tasking_request_response.json())
-    return Order(id=tasking_request_response.json()["data"]["id"])
+
+    tasking_request = requests.get(
+        f"{OC_TASKING_REQUESTS_URL}/tasking/requests/{tasking_request_response.json()['data']['id']}",
+        headers=headers,
+        timeout=10,
+    ).json()["data"]
+
+    print(tasking_request_response.json())
+    return Order(id=tasking_request_response.json()["data"]["id"],
+                 geometry=tasking_request["region"]["geometry"],
+                 type="Feature",
+                 properties={"product_id": product.id,
+                             "created": tasking_request["created_at"],
+                             "status": OrderStatus(timestamp=tasking_request["created_at"],
+                                                   status_code=OrderStatusCode.received),
+                             "search_parameters": {
+                                 "geometry": order.geometry,
+                                 "datetime": order.datetime,
+                                 "filter": order.filter,
+                             },
+                             "opportunity_properties": {}, # TODO fill this
+                             "order_parameters": order.order_parameters.model_dump()}) # TODO fill this
