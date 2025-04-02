@@ -4,6 +4,8 @@ from pydantic import BaseModel
 
 class OCPlatform(BaseModel):
     name: str
+    mission_id: str
+    sensor_id: str
     constraints: List[dict[str, Any]]
 
 
@@ -14,6 +16,8 @@ def get_available_oc_platforms() -> List[OCPlatform]:
     return [
         OCPlatform(
             name="menut",
+            mission_id="55",
+            sensor_id="MultiScape100 CIS"
             constraints=[
                 {
                     "roll_angle": [-15, 45]
@@ -22,6 +26,8 @@ def get_available_oc_platforms() -> List[OCPlatform]:
         ),
         OCPlatform(
             name="alisio",
+            sensor_id="DRAGO-2",
+            mission_id="60",
             constraints=[
                 {
                     "roll_angle": [-15, 45]
@@ -30,6 +36,8 @@ def get_available_oc_platforms() -> List[OCPlatform]:
         ),
         OCPlatform(
             name="hammer",
+            mission_id="57",
+            sensor_id="HyperScape100",
             constraints=[
                 {
                     "roll_angle": [-15, 45]
@@ -38,6 +46,8 @@ def get_available_oc_platforms() -> List[OCPlatform]:
         ),
         OCPlatform(
             name="platero",
+            mission_id="64",
+            sensor_id="MultiScape100 CIS"
             constraints=[
                 {
                     "roll_angle": [-15, 45]
@@ -46,6 +56,8 @@ def get_available_oc_platforms() -> List[OCPlatform]:
         ),
         OCPlatform(
             name="mantis",
+            mission_id="63",
+            sensor_id="HRI",
             constraints=[
                 {
                     "roll_angle": [-20, 20]
@@ -54,6 +66,8 @@ def get_available_oc_platforms() -> List[OCPlatform]:
         ),
         OCPlatform(
             name="phisat-2",
+            mission_id="56",
+            sensor_id="MultiScape100 CIS",
             constraints=[
                 {
                     "roll_angle": [-15, 45]
