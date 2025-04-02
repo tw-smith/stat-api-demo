@@ -17,7 +17,7 @@ def get_available_oc_platforms() -> List[OCPlatform]:
         OCPlatform(
             name="menut",
             mission_id="55",
-            sensor_id="MultiScape100 CIS"
+            sensor_id="MultiScape100 CIS",
             constraints=[
                 {
                     "roll_angle": [-15, 45]
@@ -47,7 +47,7 @@ def get_available_oc_platforms() -> List[OCPlatform]:
         OCPlatform(
             name="platero",
             mission_id="64",
-            sensor_id="MultiScape100 CIS"
+            sensor_id="MultiScape100 CIS",
             constraints=[
                 {
                     "roll_angle": [-15, 45]

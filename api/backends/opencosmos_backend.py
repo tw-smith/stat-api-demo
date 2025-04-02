@@ -1,3 +1,4 @@
+from multiprocessing import process
 from typing import List
 from geojson_pydantic.features import Feature
 from api.backends.opencosmos_entities.platform_data import get_available_oc_platforms
@@ -5,8 +6,6 @@ from api.backends.opencosmos_entities.utils import OffNadirRange
 from api.models import (
     Geometry,
     Order,
-    Product,
-    Provider,
     Link,
 )
 import requests
@@ -19,14 +18,28 @@ from api.backends.opencosmos_entities.transport import (
     ActivityParameters,
     Activity,
 )
+from fastapi import Request
 from api.backends.opencosmos_entities.utils import convert_datetime_string_to_datetime, datetime_parser
 from stapi_fastapi.models.opportunity import OpportunityPayload, Opportunity
+from stapi_fastapi.models.product import (
+    Product,
+    Provider,
+    ProviderRole,
+)
+
+from stapi_fastapi import ProductRouter
+from returns.result import ResultE, Success, Failure
+from returns.maybe import Maybe, Nothing, Some
+
+from api.tests_fastapi.backends import mock_create_order
+from api.tests_fastapi.shared import MyOrderParameters
+from api.backends.opencosmos_products.menut import MyOpportunityProperties
 
 OC_STAC_API_URL = "https://test.app.open-cosmos.com/api/data/v0/stac"
 OC_MTO_URL = "https://test.app.open-cosmos.com/api/data/v1/tasking"
 OC_TASKING_REQUESTS_URL = "https://test.app.open-cosmos.com/api/data/v1"
 
-def extract_processing_level(collection: dict) -> List[str] | None:
+def extract_processing_level(product: Product) -> str | None:
     """Extracts the processing level from the STAC collection
 
     Args:
@@ -35,8 +48,11 @@ def extract_processing_level(collection: dict) -> List[str] | None:
         str: The processing level
     """
 
-    level = collection.get("summaries", dict()).get("processing:level", None)
-    return level
+    splits = product.id.split("-") 
+    if len(splits) < 2:
+        raise ValueError(f"Invalid product id {product}")
+    processing_level = splits[1]
+    return processing_level
 
 
 def extract_platform_name(collection: dict) -> str | None:
@@ -52,6 +68,25 @@ def extract_platform_name(collection: dict) -> str | None:
         return platform[0]
     return None
 
+
+def mission_and_sensor_id_for(product: Product) -> tuple[str, str]:
+    """Returns the mission and sensor ID for a given platform
+
+    Args:
+        product (Product): The product
+    Returns:
+        tuple[str, str]: The mission and sensor ID
+    """
+
+    splits = product.id.split("-")
+    if len(splits) < 2:
+        raise ValueError(f"Invalid product id {product}")
+    platform_name = splits[0]
+
+    platform_data = next((platform for platform in get_available_oc_platforms() if platform.name.lower() == platform_name), None)
+    if platform_data is None:
+        raise ValueError(f"Platform data not found for {platform_name}")
+    return platform_data.mission_id, platform_data.sensor_id
 
 def oc_stac_collection_to_product(collection: dict) -> Product:
     """Converts a STAC collection to a STAPI Product
@@ -75,30 +110,37 @@ def oc_stac_collection_to_product(collection: dict) -> Product:
     if oc_provider is None:
         providers.append(Provider(name="Open Cosmos"))
 
-    parameters = collection.get("parameters", dict())
-    if extract_processing_level(collection) is not None:
-        parameters["processing:level"] = extract_processing_level(collection)
+
+    # Get platform data
+    platform_data = next((platform for platform in get_available_oc_platforms() if platform.name.lower() == extract_platform_name(collection)), None)
+    if platform_data is None:
+        raise ValueError(f"Platform data not found for {extract_platform_name(collection)}")
 
     constraints = collection.get("constraints", dict())
-    platform_constraints = next((platform for platform in get_available_oc_platforms() if platform.name.lower() == extract_platform_name(collection)), None)
-    if platform_constraints is not None:
-        constraints.update(platform_constraints.constraints)
+    if platform_data is not None:
+        for constraint in platform_data.constraints:
+            constraints.update(constraint)
 
     return Product(
         id=collection.get("id", ""),
         title=collection.get("title", ""),
         description=collection.get("description", ""),
         constraints=constraints,
-        parameters=parameters,
         license=collection.get("license", ""),
-        links=links,
+        links=[],
         keywords=collection.get("keywords", []),
         providers=providers,
+        create_order=mock_create_order,
+        search_opportunities=search_opportunities,
+        search_opportunities_async=None,
+        get_opportunity_collection=None,
+        opportunity_properties=MyOpportunityProperties,
+        order_parameters=MyOrderParameters,
     )
-
 
 def opportunity_to_mto_search_request(
     opportunity: OpportunityPayload,
+    product: Product
 ) -> ManualTaskingOrchestrationSearchRequest:
     """Converts a STAT Opportunity object into an MTO opportunity search request object
 
@@ -109,8 +151,10 @@ def opportunity_to_mto_search_request(
         ManualTaskingOrchestrationSearchRequest: The MTO opportunity search request object
     """
 
+    mission_id, sensor_id = mission_and_sensor_id_for(product)
+
     return ManualTaskingOrchestrationSearchRequest(
-        instruments=[{"mission_id": "55", "sensor_id": "MultiScape100 CIS"}],
+        instruments=[{"mission_id": mission_id, "sensor_id": sensor_id}],
         areas_of_interest=[
             {
                 "name": "aoi_name",
@@ -280,103 +324,154 @@ def build_tasking_request_request(
     )
 
 
-class OpenCosmosBackend:
-    async def find_opportunities(
-        self, search: OpportunityPayload, token: str
-    ) -> list[Opportunity]:
-        """Finds opportunities from the MTO service and converts them to STAT Opportunities
+def generate_product_list(token: str) -> list[Product]:
+    """Generates a list of products from the STAC API
+    Returns:
+        list[Product]: A list of products
+    """
 
-        Args:
-            search (OpportunityPayload): The STAT Opportunity object
-            token (str): The user's token
+    headers = {"Authorization": f"Bearer {token}"}
 
-        Returns:
-            list[Opportunity]: A list of STAT Opportunities
-        """
+    stac_collection_response = requests.get(
+        f"{OC_STAC_API_URL}/collections", headers=headers
+    )
+    products = []
+    for collection in stac_collection_response.json():
+        if "--qa" in collection["id"]:
+            continue
+        platforms = collection.get("summaries", dict()).get("platform", None)
+        [platform.lower() for platform in platforms] if platforms is not None else []
+        if platforms is None:
+            continue
+        allowed_platforms = []
+        [allowed_platforms.append(platform.name.lower()) for platform in get_available_oc_platforms()]
+        if not set(platforms).issubset(allowed_platforms):
+            continue
+        products.append(oc_stac_collection_to_product(collection))
+    return products
 
-        headers = {
-            "Authorization": f"{token}",
-            "Content-Type": "application/json",
-        }
 
-        body = json.dumps(
-                opportunity_to_mto_search_request(search).dict(), default=str, indent=4
-            )
+async def search_opportunities(product_router: ProductRouter,
+                               search: OpportunityPayload,
+                                next: str | None,
+                                limit: int,
+                                request: Request) -> ResultE[tuple[list[Opportunity], Maybe[str]]]:
+    """Searches for opportunities using the Open Cosmos backend
+    Args:
+        product_router (ProductRouter): The product router
+        search (OpportunityPayload): The STAT Opportunity object
+        next (str | None): The next token for pagination
+        limit (int): The limit for pagination
+        request (Request): The request object
+    Returns:
+        ResultE[tuple[list[Opportunity], Maybe[str]]]: A result object containing the opportunities and the next token
+    """
 
-        mto_search_response = requests.post(
-            f"{OC_MTO_URL}/search",
-            data=body,
-            headers=headers,
-            timeout=10,
+    try:
+        opportunities = await find_opportunities(search, product_router.product, request.headers.get("Authorization"))
+        return Success((opportunities, Nothing))
+    except Exception as e:
+        return Failure(e)
+
+
+async def find_opportunities(
+    search: OpportunityPayload, product: Product, token: str
+) -> list[Opportunity]:
+    """Finds opportunities from the MTO service and converts them to STAT Opportunities
+
+    Args:
+        search (OpportunityPayload): The STAT Opportunity object
+        token (str): The user's token
+
+    Returns:
+        list[Opportunity]: A list of STAT Opportunities
+    """
+
+    headers = {
+        "Authorization": f"{token}",
+        "Content-Type": "application/json",
+    }
+
+    body = json.dumps(
+            opportunity_to_mto_search_request(search, product).dict(), default=str, indent=4
         )
 
-        opportunities = mto_search_response_to_opportunity_collection(
-            mto_search_response.json()
-        )
-        return opportunities
+    mto_search_response = requests.post(
+        f"{OC_MTO_URL}/search",
+        data=body,
+        headers=headers,
+        timeout=10,
+    )
 
-    async def find_products(self, token: str) -> list[Product]:
-        """Finds products from the STAC API and converts them to STAT Products
+    opportunities = mto_search_response_to_opportunity_collection(
+        mto_search_response.json()
+    )
+    return opportunities
 
-        Args:
-            token (str): The user's token
 
-        Returns:
-            list[Product]: A list of STAT Products
-        """
+async def find_products(self, token: str) -> list[Product]:
+    """Finds products from the STAC API and converts them to STAT Products
 
-        headers = {"Authorization": f"Bearer {token}"}
+    Args:
+        token (str): The user's token
 
-        stac_collection_response = requests.get(
-            f"{OC_STAC_API_URL}/collections", headers=headers
-        )
+    Returns:
+        list[Product]: A list of STAT Products
+    """
 
-        products = []
-        for collection in stac_collection_response.json():
-            if "--qa" in collection["id"]:
-                continue
-            platforms = collection.get("summaries", dict()).get("platform", None)
-            [platform.lower() for platform in platforms] if platforms is not None else []
-            if platforms is None:
-                continue
+    headers = {"Authorization": f"Bearer {token}"}
 
-            allowed_platforms = []
-            [allowed_platforms.append(platform.name.lower()) for platform in get_available_oc_platforms()]
-            if not set(platforms).issubset(allowed_platforms):
-                continue
-            products.append(oc_stac_collection_to_product(collection))
+    stac_collection_response = requests.get(
+        f"{OC_STAC_API_URL}/collections", headers=headers
+    )
 
-        return products
+    products = []
+    for collection in stac_collection_response.json():
+        if "--qa" in collection["id"]:
+            continue
+        platforms = collection.get("summaries", dict()).get("platform", None)
+        [platform.lower() for platform in platforms] if platforms is not None else []
+        if platforms is None:
+            continue
 
-    async def place_order(self, order: Opportunity, token: str) -> Order:
-        """Takes a STAT opportunity and converts it to an OC tasking request and submits
-        it to the Tasking Requests service.
+        allowed_platforms = []
+        [allowed_platforms.append(platform.name.lower()) for platform in get_available_oc_platforms()]
+        if not set(platforms).issubset(allowed_platforms):
+            continue
+        products.append(oc_stac_collection_to_product(collection))
 
-        Args:
-            order (Opportunity): The STAT Opportunity object
-            token (str): The user's token
+    return products
 
-        Returns:
-            Order: The order object
-        """
 
-        headers = {
-            "Authorization": f"Bearer {token}",
-            "Content-Type": "application/json",
-        }
+async def place_order(self, order: Opportunity, token: str) -> Order:
+    """Takes a STAT opportunity and converts it to an OC tasking request and submits
+    it to the Tasking Requests service.
 
-        # swath = get_swath(order, token)
+    Args:
+        order (Opportunity): The STAT Opportunity object
+        token (str): The user's token
 
-        tasking_request = build_tasking_request_request(order, token)
+    Returns:
+        Order: The order object
+    """
 
-        project_id = "d4ecc3b7-d72c-4c5f-80c9-0f60d9755e6d"
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Content-Type": "application/json",
+    }
 
-        tasking_request_response = requests.post(
-            f"{OC_TASKING_REQUESTS_URL}/projects/{project_id}/tasking/requests",
-            data=tasking_request.to_json(),
-            headers=headers,
-            timeout=10,
-        )
+    # swath = get_swath(order, token)
 
-        print(tasking_request_response.json())
-        return Order(id=tasking_request_response.json()["data"]["id"])
+    tasking_request = build_tasking_request_request(order, token)
+
+    project_id = "d4ecc3b7-d72c-4c5f-80c9-0f60d9755e6d"
+
+    tasking_request_response = requests.post(
+        f"{OC_TASKING_REQUESTS_URL}/projects/{project_id}/tasking/requests",
+        data=tasking_request.to_json(),
+        headers=headers,
+        timeout=10,
+    )
+
+    print(tasking_request_response.json())
+    return Order(id=tasking_request_response.json()["data"]["id"])
