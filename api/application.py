@@ -6,6 +6,8 @@ from typing import Any
 
 from fastapi import FastAPI
 
+import uvicorn
+
 
 from api.backends.opencosmos_backend import generate_product_list
 
@@ -59,3 +61,7 @@ for product in available_products:
 #root_router.add_product(menut)
 app: FastAPI = FastAPI(lifespan=lifespan)
 app.include_router(root_router, prefix="")
+
+
+if __name__ == "__main__":
+    uvicorn.run(app=app, port=8000, host="0.0.0.0")
