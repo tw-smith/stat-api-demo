@@ -1,8 +1,9 @@
 from typing import Optional
 from geojson_pydantic.features import Feature
 from pydantic import BaseModel, Field
+from shapely import Geometry
 from api.backends.opencosmos_entities.platform_data import get_available_oc_platforms
-from api.backends.opencosmos_entities.utils import Range
+from api.backends.opencosmos_entities.utils import Range, convert_datetime_string_to_datetime
 from api.models import (
     Link
 )
@@ -16,6 +17,7 @@ from api.backends.opencosmos_entities.transport import (
     ManualTaskingOrchestrationSearchResponse,
     ActivityParameters,
     Activity,
+    ManualTaskingOrchestrationSwathRequest,
 )
 from fastapi import Request
 from stapi_fastapi.models.opportunity import OpportunityPayload, Opportunity
@@ -188,7 +190,8 @@ def opportunity_to_mto_search_request(
 
 
 def mto_search_response_to_opportunity_collection(
-    response: dict
+    response: dict,
+    token: str,
 ) -> list[Opportunity]:
     """Converts an MTO opportunity search response into a list of STAT Opportunities
 
@@ -200,15 +203,21 @@ def mto_search_response_to_opportunity_collection(
         list[Opportunity]: A list of STAT Opportunities (STAT Opportunity collection?)
     """
 
+
+
     opportunities = []
     for opportunity in response["data"]:
         start = str(opportunity["start"])
         stop = str(opportunity["stop"])
+        
+        # Call the Swath provider for each opportunity
+        swath = get_swath(opportunity, opportunity["field_of_regard"]["footprint"]["geojson"]["geometry"], token)
+        
         opportunities.append(
             Opportunity(
                 id="id",
                 type="Feature",
-                geometry=opportunity["field_of_regard"]["footprint"]["geojson"]["geometry"],
+                geometry=swath["data"]["footprint"]["geojson"]["geometry"],
                 # TODO implement constraints
                 constraints=None,
                 properties={"datetime": f"{start}/{stop}", 
@@ -224,44 +233,49 @@ def mto_search_response_to_opportunity_collection(
     return opportunities
 
 
-# def get_swath(oc_opp: dict, aoi: Geometry, token: str) -> dict:
-#     """Builds the MTO swath request and sends it to the MTO service swath endpoint
+def get_swath(oc_opp: dict, aoi: Geometry, token: str) -> dict:
+    """Builds the MTO swath request and sends it to the MTO service swath endpoint
 
-#     Args:
-#         oc_opp (dict): The OpenCosmos opportunity
-#         aoi (Geometry): The area of interest
-#         token (str): The user's token
+    Args:
+        oc_opp (dict): The OpenCosmos opportunity
+        aoi (Geometry): The area of interest
+        token (str): The user's token
 
-#     Returns:
-#         dict: The MTO swath response
-#     """
+    Returns:
+        dict: The MTO swath response
+    """
 
-#     headers = {
-#         "Authorization": f"Bearer {token}",
-#         "Content-Type": "application/json",
-#     }
+    headers = {
+        "Authorization": f"{token}",
+        "Content-Type": "application/json",
+    }
+    
+    project_id = os.getenv("PROJECT_ID")
+    if project_id is None:
+        raise ValueError("PROJECT_ID environment variable not set")
 
-#     payload = ManualTaskingOrchestrationSwathRequest(
-#         instrument={"mission_id": "55", "sensor_id": "MultiScape100 CIS"},
-#         area_of_interest={
-#             "name": "aoi_name",
-#             "geojson": Feature(
-#                 geometry=aoi, type="Feature", properties={"test": "test"}
-#             ),
-#         },
-#         roll_angle=3.2,  # TODO get from constraints
-#         start=convert_datetime_string_to_datetime(oc_opp["data"][0]["start"]),
-#         stop=convert_datetime_string_to_datetime(oc_opp["data"][0]["stop"]),
-#     )
+    payload = ManualTaskingOrchestrationSwathRequest(
+        instrument={"mission_id": oc_opp["mission_id"], "sensor_id": oc_opp["imager_id"]},
+        area_of_interest={
+            "name": "aoi_name",
+            "geojson": Feature(
+                geometry=aoi, type="Feature", properties={"test": "test"}
+            ),
+        },
+        project_id=project_id,
+        roll_angle=oc_opp["suggested_roll"],  # TODO get from constraints
+        start=oc_opp["start"],
+        stop=oc_opp["stop"],
+    )
 
-#     mto_swath_response = requests.post(
-#         f"{OC_MTO_URL}/swath",
-#         data=json.dumps(payload.dict(), default=str, indent=4),
-#         headers=headers,
-#         timeout=10,
-#     )
+    mto_swath_response = requests.post(
+        f"{OC_MTO_URL}/swath",
+        data=json.dumps(payload.dict(), default=str, indent=4),
+        headers=headers,
+        timeout=10,
+    )
 
-#     return mto_swath_response.json()
+    return mto_swath_response.json()
 
 
 def get_oc_opportunity(opportunity: OpportunityPayload|OrderPayload, product: Product, token: str) -> ManualTaskingOrchestrationSearchResponse:
@@ -436,7 +450,7 @@ async def find_opportunities(
     )
 
     opportunities = mto_search_response_to_opportunity_collection(
-        mto_search_response.json()
+        mto_search_response.json(), token
     )
     
     # Query the opportunities

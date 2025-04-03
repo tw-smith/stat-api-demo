@@ -26,12 +26,10 @@ class ManualTaskingOrchestrationSwathRequest(BaseModel):
     roll_angle: float
     start: datetime
     stop: datetime
+    project_id: str
 
     def to_json(self, **kwargs: Any):
         return self.json(by_alias=True, exclude_unset=True, **kwargs)
-
-    class Config:
-        json_encoders = {datetime: convert_datetime_to_iso8601}
 
 
 class ActivityParameters(BaseModel):
