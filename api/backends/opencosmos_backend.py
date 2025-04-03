@@ -14,35 +14,35 @@ from api.backends.opencosmos_entities.transport import (
     CreateTaskingRequestRequest,
     ManualTaskingOrchestrationSearchRequest,
     ManualTaskingOrchestrationSearchResponse,
-    ManualTaskingOrchestrationSwathRequest,
     ActivityParameters,
     Activity,
 )
 from fastapi import Request
-from api.backends.opencosmos_entities.utils import convert_datetime_string_to_datetime
 from stapi_fastapi.models.opportunity import OpportunityPayload, Opportunity
 from stapi_fastapi.models.order import OrderPayload, Order, OrderStatus, OrderStatusCode
 from stapi_fastapi.models.product import (
     Product,
     Provider,
 )
+from pygeofilter.parsers.cql2_json import parse as parse_json
 
 from stapi_fastapi import OpportunityProperties, ProductRouter
 from returns.result import ResultE, Success, Failure
 from returns.maybe import Maybe, Nothing
 
 from api.tests_fastapi.shared import MyOrderParameters
+from api.utils.filter import filter_opportunity
 
 OC_STAC_API_URL = "https://test.app.open-cosmos.com/api/data/v0/stac"
 OC_MTO_URL = "https://test.app.open-cosmos.com/api/data/v1/tasking"
 OC_TASKING_REQUESTS_URL = "https://test.app.open-cosmos.com/api/data/v1"
-
+OC_OPENAPP_PROD = ""
 
 class MyOpportunityProperties(OpportunityProperties):
-    roll_angle: Range
-    observational_zenith_angle: Optional[float]
-    sun_zenith_angle: Optional[float]
-    cloud_coverage: Optional[Range]
+    roll_angle: float
+    observational_zenith_angle: float
+    sun_zenith_angle: float
+    cloud_coverage: float
 
 def extract_processing_level(product: Product) -> str | None:
     """Extracts the processing level from the STAC collection
@@ -179,18 +179,7 @@ def opportunity_to_mto_search_request(
             }
         ],
         # constraints=opportunity.constraints, #TODO implement constraints
-        constraints=[
-        {
-            "min": -15,
-            "max": 15,
-            "type": "ROLL"
-        },
-        {
-            "min": 0,
-            "max": 90,
-            "type": "SZA"
-        }
-    ],
+        constraints=[],
         start=opportunity.datetime[0],
         stop=opportunity.datetime[1],
     )
@@ -222,10 +211,10 @@ def mto_search_response_to_opportunity_collection(
                 constraints=None,
                 properties={"datetime": f"{start}/{stop}", 
                             "product_id": "hard coded opp product id",
-                            "roll_angle": Range(minimum=opportunity["roll_steering"][0], maximum=opportunity["roll_steering"][1]),
+                            "roll_angle": opportunity["suggested_roll"],
                             "sun_zenith_angle": opportunity["sza"],
-                            "observational_zenith_angle": None,
-                            "cloud_coverage": Range(minimum=0, maximum=100),
+                            "observational_zenith_angle": abs(opportunity["suggested_roll"]), #TODO use OZA instead of roll_steering
+                            "cloud_coverage": opportunity["cloud_coverage"]["min_cloud_cover"]["forecast"]["cloud_cover_pc"] if opportunity.get("cloud_coverage") is not None else 25,
                 },
                 links=[]
             )
@@ -448,6 +437,9 @@ async def find_opportunities(
         mto_search_response.json()
     )
     
+    # Query the opportunities
+    opportunities = filter_opportunity(parse_json(search.filter), opportunities)
+    
     # Add links to opportunities
     for opportunity in opportunities:
         opp_json = opportunity.model_dump()
@@ -529,15 +521,12 @@ async def place_order(product: Product, order: OrderPayload, token: str) -> Orde
         timeout=10,
     )
 
-    print(tasking_request_response.json())
-
     tasking_request = requests.get(
         f"{OC_TASKING_REQUESTS_URL}/tasking/requests/{tasking_request_response.json()['data']['id']}",
         headers=headers,
         timeout=10,
     ).json()["data"]
 
-    print(tasking_request_response.json())
     return Order(id=tasking_request_response.json()["data"]["id"],
                  geometry=tasking_request["region"]["geometry"],
                  type="Feature",
@@ -551,4 +540,5 @@ async def place_order(product: Product, order: OrderPayload, token: str) -> Orde
                                  "filter": order.filter,
                              },
                              "opportunity_properties": {}, # TODO fill this
-                             "order_parameters": order.order_parameters.model_dump()}) # TODO fill this
+                             "order_parameters": order.order_parameters.model_dump()})
+                #  links=[Link(href=)]) # TODO fill this
