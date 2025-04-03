@@ -286,7 +286,7 @@ def get_oc_opportunity(opportunity: OpportunityPayload|OrderPayload, product: Pr
 
     request_body = opportunity_to_mto_search_request(opportunity, product)
     headers = {
-        "Authorization": f"{token}",
+        "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
     response = requests.post(
@@ -384,9 +384,14 @@ async def create_order(
         ResultE[Order]: A result object containing the order
     """
     product = product_router.product
-    
+
+    token = os.environ.get("TOKEN")
+    if token is None:
+        raise ValueError("TOKEN environment variable not set")
+
+
     try:
-        order = await place_order(product, order_payload, request.headers.get("Authorization"))
+        order = await place_order(product, order_payload, token)
         return Success(order)
     except Exception as e:
         return Failure(e)
@@ -408,8 +413,12 @@ async def search_opportunities(product_router: ProductRouter,
         ResultE[tuple[list[Opportunity], Maybe[str]]]: A result object containing the opportunities and the next token
     """
 
+    token = os.environ.get("TOKEN")
+    if token is None:
+        raise ValueError("TOKEN environment variable not set")
+
     try:
-        opportunities = await find_opportunities(search, product_router.product, request.headers.get("Authorization"), request.base_url)
+        opportunities = await find_opportunities(search, product_router.product, token, request.base_url)
         return Success((opportunities, Nothing))
     except Exception as e:
         return Failure(e)
@@ -429,7 +438,7 @@ async def find_opportunities(
     """
 
     headers = {
-        "Authorization": f"{token}",
+        "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
 
@@ -517,7 +526,7 @@ async def place_order(product: Product, order: OrderPayload, token: str) -> Orde
     """
 
     headers = {
-        "Authorization": f"{token}",
+        "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
 
