@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 from typing import Any
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 import uvicorn
 
@@ -57,6 +58,13 @@ for product in available_products:
 #root_router.add_product(menut)
 app: FastAPI = FastAPI(lifespan=lifespan)
 app.include_router(root_router, prefix="")
+
+app.add_middleware(CORSMiddleware,
+                   allow_origins=["*"],
+                   allow_credentials=True,
+                   allow_methods=["*"],
+                   allow_headers=["*"],
+)
 
 
 if __name__ == "__main__":
