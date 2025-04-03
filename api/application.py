@@ -23,8 +23,6 @@ from api.tests_fastapi.backends import (
 from api.tests_fastapi.shared import (
     InMemoryOpportunityDB,
     InMemoryOrderDB,
-    product_test_satellite_provider_sync_opportunity,
-    product_test_spotlight_sync_async_opportunity,
 )
 
 
@@ -47,8 +45,6 @@ root_router = RootRouter(
     get_opportunity_search_record=None,
     conformances=[CORE, OPPORTUNITIES]
 )
-# root_router.add_product(product_test_spotlight_sync_async_opportunity)
-# root_router.add_product(product_test_satellite_provider_sync_opportunity)
 
 tk = os.environ.get("TOKEN")
 if tk is None:
