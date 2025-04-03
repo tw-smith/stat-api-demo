@@ -35,10 +35,19 @@ from returns.maybe import Maybe, Nothing
 from api.tests_fastapi.shared import MyOrderParameters
 from api.utils.filter import filter_opportunity
 
-OC_STAC_API_URL = "https://test.app.open-cosmos.com/api/data/v0/stac"
-OC_MTO_URL = "https://test.app.open-cosmos.com/api/data/v1/tasking"
-OC_TASKING_REQUESTS_URL = "https://test.app.open-cosmos.com/api/data/v1"
-OC_OPENAPP_PROD = ""
+environment = os.getenv("ENVIRONMENT", "test")
+if environment == "prod":
+    OC_STAC_API_URL = "https://app.open-cosmos.com/api/data/v0/stac"
+    OC_MTO_URL = "https://app.open-cosmos.com/api/data/v1/tasking"
+    OC_TASKING_REQUESTS_URL = "https://app.open-cosmos.com/api/data/v1"
+
+elif environment == "test":
+    OC_STAC_API_URL = "https://test.app.open-cosmos.com/api/data/v0/stac"
+    OC_MTO_URL = "https://test.app.open-cosmos.com/api/data/v1/tasking"
+    OC_TASKING_REQUESTS_URL = "https://test.app.open-cosmos.com/api/data/v1"
+
+else:
+    raise ValueError(f"Invalid environment {environment}")
 
 class MyOpportunityProperties(OpportunityProperties):
     roll_angle: float
