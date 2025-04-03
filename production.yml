@@ -1,0 +1,5 @@
+services:
+  stapi:
+    image: ocstapi
+    environment:
+      - PROJECT_ID=44d8693d-bbc4-4885-ba1e-bf1c24000337

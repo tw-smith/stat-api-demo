@@ -26,7 +26,9 @@ from stapi_fastapi.models.product import (
 )
 from pygeofilter.parsers.cql2_json import parse as parse_json
 
-from stapi_fastapi import OpportunityProperties, ProductRouter
+import os
+
+from stapi_fastapi import OpportunityProperties, ProductRouter, OpportunityProperties
 from returns.result import ResultE, Success, Failure
 from returns.maybe import Maybe, Nothing
 
@@ -319,7 +321,7 @@ def build_tasking_request_request(
 
     return CreateTaskingRequestRequest(
         type="MANUAL",
-        region_name="region_name",
+        region_name="STAPI Demo Works Woohoo",
         region=Feature(
             geometry=order.geometry, type="Feature", properties={"test": "test"}
         ),
@@ -512,7 +514,9 @@ async def place_order(product: Product, order: OrderPayload, token: str) -> Orde
 
     tasking_request = build_tasking_request_request(order, product, token)
 
-    project_id = "d4ecc3b7-d72c-4c5f-80c9-0f60d9755e6d"
+    project_id = os.getenv("PROJECT_ID")
+    if project_id is None:
+        raise ValueError("PROJECT_ID environment variable not set")
 
     tasking_request_response = requests.post(
         f"{OC_TASKING_REQUESTS_URL}/projects/{project_id}/tasking/requests",

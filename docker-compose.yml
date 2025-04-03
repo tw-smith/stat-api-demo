@@ -1,0 +1,10 @@
+name: ocstapi
+
+services:
+  stapi:
+    image: tsmithoc/ocstapi
+    ports:
+      - "8000:8000"
+    environment:
+      - TOKEN=${TOKEN}
+      - PROJECT_ID=${PROJECT_ID}
