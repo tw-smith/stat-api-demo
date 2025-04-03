@@ -37,10 +37,19 @@ from returns.maybe import Maybe, Nothing
 from api.tests_fastapi.shared import MyOrderParameters
 from api.utils.filter import filter_opportunity
 
-OC_STAC_API_URL = "https://test.app.open-cosmos.com/api/data/v0/stac"
-OC_MTO_URL = "https://test.app.open-cosmos.com/api/data/v1/tasking"
-OC_TASKING_REQUESTS_URL = "https://test.app.open-cosmos.com/api/data/v1"
-OC_OPENAPP_PROD = ""
+environment = os.getenv("ENVIRONMENT", "test")
+if environment == "prod":
+    OC_STAC_API_URL = "https://app.open-cosmos.com/api/data/v0/stac"
+    OC_MTO_URL = "https://app.open-cosmos.com/api/data/v1/tasking"
+    OC_TASKING_REQUESTS_URL = "https://app.open-cosmos.com/api/data/v1"
+
+elif environment == "test":
+    OC_STAC_API_URL = "https://test.app.open-cosmos.com/api/data/v0/stac"
+    OC_MTO_URL = "https://test.app.open-cosmos.com/api/data/v1/tasking"
+    OC_TASKING_REQUESTS_URL = "https://test.app.open-cosmos.com/api/data/v1"
+
+else:
+    raise ValueError(f"Invalid environment {environment}")
 
 class MyOpportunityProperties(OpportunityProperties):
     roll_angle: float
@@ -291,7 +300,7 @@ def get_oc_opportunity(opportunity: OpportunityPayload|OrderPayload, product: Pr
 
     request_body = opportunity_to_mto_search_request(opportunity, product)
     headers = {
-        "Authorization": f"{token}",
+        "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
     response = requests.post(
@@ -389,9 +398,14 @@ async def create_order(
         ResultE[Order]: A result object containing the order
     """
     product = product_router.product
-    
+
+    token = os.environ.get("TOKEN")
+    if token is None:
+        raise ValueError("TOKEN environment variable not set")
+
+
     try:
-        order = await place_order(product, order_payload, request.headers.get("Authorization"))
+        order = await place_order(product, order_payload, token)
         return Success(order)
     except Exception as e:
         return Failure(e)
@@ -413,8 +427,12 @@ async def search_opportunities(product_router: ProductRouter,
         ResultE[tuple[list[Opportunity], Maybe[str]]]: A result object containing the opportunities and the next token
     """
 
+    token = os.environ.get("TOKEN")
+    if token is None:
+        raise ValueError("TOKEN environment variable not set")
+
     try:
-        opportunities = await find_opportunities(search, product_router.product, request.headers.get("Authorization"), request.base_url)
+        opportunities = await find_opportunities(search, product_router.product, token, request.base_url)
         return Success((opportunities, Nothing))
     except Exception as e:
         return Failure(e)
@@ -434,7 +452,7 @@ async def find_opportunities(
     """
 
     headers = {
-        "Authorization": f"{token}",
+        "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
 
@@ -522,7 +540,7 @@ async def place_order(product: Product, order: OrderPayload, token: str) -> Orde
     """
 
     headers = {
-        "Authorization": f"{token}",
+        "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
     }
 
